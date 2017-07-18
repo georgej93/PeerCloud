@@ -1,0 +1,21 @@
+{
+  "name": "PeerCloud",
+  "version": "1.0.0",
+  "description": "MSc Project",
+  "main": "master.js",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "express": "^4.15.3",
+    "express-ws": "^3.0.0",
+    "get-pixels": "^3.3.0",
+    "jimp": "^0.2.28",
+    "mapred": "^0.1.0",
+    "socket.io": "^2.0.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC"
+}
