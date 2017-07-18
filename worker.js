@@ -32,14 +32,17 @@ function emitIntermediateValues(intermediate_values,socket) {
     
     //Create an intermediate file: named with worker_id. Worker should append if file already exists
     var intermediate_obj = { "values" : intermediate_values};
-    var writeable = JSON.stringify(intermediate_obj);
+    var writeable = JSON.stringify(intermediate_obj); 
     
     fs.writeFile('./intermediate/' + socket.id + '.txt', writeable, function(err) {
         if(err) {
             console.log(err);
             return console.log("Error writing intermediate values to file");
-        }         
+        } else {
+            socket.emit('STATUS_UPDATE', socket.id, "idle");
+        }
     });
+    
 }
 
 //Create websocket connection
@@ -71,7 +74,8 @@ socket.on('FILE', function(fileObj) {
 
 //Perform test task
 socket.on('TASK', function(partition_ref, obj) {
-    socket.emit('TASK_RECIEVED', socket.id);
+    socket.emit('STATUS_UPDATE', socket.id, "busy");
+    
     //Partition ref refers to an integer corresponding to a partitions filename
     working_partition = './user_files/partitions/' + partition_ref + '.txt';
     getIntermediateValues(obj, socket, emitIntermediateValues);

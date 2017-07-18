@@ -117,12 +117,9 @@ function distributePartitions() {
     var filename = './user_files/map.txt';
     var toSend = fs.readFileSync(filename,'utf8');
     var obj = JSON.parse(JSON.stringify(toSend));
-    
-    console.log("Worker payload prepared");
-    
+
     io.of('/').clients((error, clients) => {
         if(error) throw error;
-        console.log("Sending test task to idle worker: ", partitions);
         
         if(partitions==0) {
             return console.log("Partitions == 0");
@@ -130,11 +127,9 @@ function distributePartitions() {
         
         //Distribute all partitions amongst workers if possible
         for(i=1 ; i<=partitions ; i++) {
-            console.log("i1=",i);
             var idle_worker_id = findIdleWorker();
             
             if(idle_worker_id != 0) {
-                console.log("sending partition",i);
                 io.sockets.connected[idle_worker_id].emit('TASK',i,obj);                  
             } else {
                 console.log("No idle workers avilable to take task");
@@ -177,13 +172,13 @@ io.on('connect', (socket) => {
         io.sockets.connected[socket.id].emit('REQ_INFO');
     });
     
-    //When worker info is returned, store in the worker tracker
+    //Store Worker Info
     socket.on('WORKER_INFO', function (new_worker) {
         console.log("Recieved worker info, adding to tracker");
         activeWorkers.push(new_worker);
     });
     
-    //Remove disconnected workers from the worker tracker
+    //Remove Disconnected Workers
     socket.on('disconnect', function() {
         console.log("Worker disconnected with id : " + socket.id);
         activeWorkers.forEach(function(worker) {
@@ -198,15 +193,15 @@ io.on('connect', (socket) => {
         console.log("Recieved an intermediate value", val);
     });
     
-    socket.on('TASK_RECIEVED', function(worker_id) {
-        console.log(worker_id + " recieved a task, changing status to 'busy'");
+    //Update Worker Status
+    socket.on('STATUS_UPDATE', function(worker_id, new_status) {
+        console.log("Updating " + worker_id + " status to " + new_status);
         activeWorkers.forEach(function(worker) {
             if(worker.worker_id == socket.id) {
-                activeWorkers[activeWorkers.indexOf(worker)].worker_status = "busy";
+                activeWorkers[activeWorkers.indexOf(worker)].worker_status = new_status;
             }
         });
-    });
-    
+    });   
 });
 
 //TEST FUNCTIONS =========================
