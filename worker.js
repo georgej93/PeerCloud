@@ -23,7 +23,7 @@ function getIntermediateValues(jsonObj, socket, _callback) {
     console.log("in getIntVals");
     var intermediate_values = eval(jsonObj);
     _callback(intermediate_values, socket);
-}
+}zSAX
 
 function emitIntermediateValues(intermediate_values,socket) {   
     /*intermediate_values.forEach(function(intermediate_value){
@@ -33,6 +33,8 @@ function emitIntermediateValues(intermediate_values,socket) {
     //Create an intermediate file: named with worker_id. Worker should append if file already exists
     var intermediate_obj = { "values" : intermediate_values};
     var writeable = JSON.stringify(intermediate_obj); 
+    
+    console.log(writeable);
     
     fs.writeFile('./intermediate/' + socket.id + '.txt', writeable, function(err) {
         if(err) {
@@ -74,7 +76,7 @@ socket.on('FILE', function(fileObj) {
 
 //Perform test task
 socket.on('TASK', function(partition_ref, obj) {
-    socket.emit('STATUS_UPDATE', socket.id, "busy");
+    //socket.emit('STATUS_UPDATE', socket.id, "busy");
     
     //Partition ref refers to an integer corresponding to a partitions filename
     working_partition = './user_files/partitions/' + partition_ref + '.txt';

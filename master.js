@@ -33,6 +33,8 @@ var id_tracker = 0;
 var data;
 
 function findIdleWorker() {
+    console.log("Attempting to find idle worker");
+    
     for(n=0 ; n<activeWorkers.length ; n++) {
         if(activeWorkers[n].worker_status === "idle") {
             return activeWorkers[n].worker_id;
@@ -122,14 +124,19 @@ function distributePartitions() {
         if(error) throw error;
         
         if(partitions==0) {
-            return console.log("Partitions == 0");
+            return console.log("Failed to allocate partitions: no partitions created");
         }
         
         //Distribute all partitions amongst workers if possible
         for(i=1 ; i<=partitions ; i++) {
-            var idle_worker_id = findIdleWorker();
+            console.log("Worker Log: ========");
+            console.log(activeWorkers);
             
+            var idle_worker_id = findIdleWorker();
+
             if(idle_worker_id != 0) {
+                console.log("IDLE WORKER:", idle_worker_id);
+                //activeWorkers[activeWorkers.indexOf(idle_worker_id)].worker_status = "busy";
                 io.sockets.connected[idle_worker_id].emit('TASK',i,obj);                  
             } else {
                 console.log("No idle workers avilable to take task");
@@ -195,9 +202,10 @@ io.on('connect', (socket) => {
     
     //Update Worker Status
     socket.on('STATUS_UPDATE', function(worker_id, new_status) {
-        console.log("Updating " + worker_id + " status to " + new_status);
+        console.log("Updating " + worker_id + " status to " + new_status + " from:");
         activeWorkers.forEach(function(worker) {
             if(worker.worker_id == socket.id) {
+                console.log(activeWorkers[activeWorkers.indexOf(worker)].worker_status);
                 activeWorkers[activeWorkers.indexOf(worker)].worker_status = new_status;
             }
         });

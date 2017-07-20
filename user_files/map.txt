@@ -13,19 +13,17 @@ var map = function() {
 
     var data = fs.readFileSync(working_partition,'utf8');
 
-    //Add words in partition to a list based on whitespaces
-    for(i=0 ; i<data.length ; i++) {
-        if(data[i] == ' ') {
-            upper = i;
-            partition_list.push(data.slice(lower, upper));
-            lower = upper;
-        }
-    }
+    console.log("Got data:");
+    console.log(data);
 
+    var data_list = data.split('\r\n');
+    console.log("Got data_list:");
+    console.log(data_list);
+          
     //Generate the word counts for all words within data
     //Counts is an associative array: the word is the index
     var list = [], counts = {};
-    partition_list.forEach(function(word){
+    data_list.forEach(function(word){
        counts[word] = (counts[word] || 0) + 1;
     });
 
