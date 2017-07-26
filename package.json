@@ -4,6 +4,7 @@
   "description": "MSc Project",
   "main": "master.js",
   "dependencies": {
+    "async": "^2.5.0",
     "body-parser": "^1.17.2",
     "express": "^4.15.3",
     "express-ws": "^3.0.0",
