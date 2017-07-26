@@ -20,10 +20,10 @@ function generateInfo(id, stat) {
 }
 
 function getIntermediateValues(jsonObj, socket, _callback) {
-    console.log("in getIntVals");
+    //console.log("in getIntVals");
     var intermediate_values = eval(jsonObj);
     _callback(intermediate_values, socket);
-}zSAX
+};
 
 function emitIntermediateValues(intermediate_values,socket) {   
     /*intermediate_values.forEach(function(intermediate_value){
@@ -77,8 +77,25 @@ socket.on('FILE', function(fileObj) {
 //Perform test task
 socket.on('TASK', function(partition_ref, obj) {
     //socket.emit('STATUS_UPDATE', socket.id, "busy");
+    console.log("Recieved task from server - partition:", partition_ref);
     
     //Partition ref refers to an integer corresponding to a partitions filename
     working_partition = './user_files/partitions/' + partition_ref + '.txt';
-    getIntermediateValues(obj, socket, emitIntermediateValues);
+    //getIntermediateValues(obj, socket, emitIntermediateValues);
+    
+    /*fs.readFile('./user_files/partitions/1.txt','utf8', function(err, data) {
+        if(err) {
+            return console.log(err);
+        }
+        
+        console.log("Got data:");
+        console.log(data);
+    });*/
+    
+    working_partition = './user_files/partitions/' + partition_ref + '.txt';
+    var data = fs.readFileSync(working_partition,'utf8');
+    console.log("Read data:");
+    console.log(data);
+    
+    socket.emit('STATUS_UPDATE', socket.id, "idle");
 });
