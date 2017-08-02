@@ -2,6 +2,10 @@
 const io = require('socket.io-client');
 var socket;
 
+//Testing Variables
+var tests = 0;
+var failures = 0;
+
 //File Reading Variables:
 var fs = require('fs');
 
@@ -19,60 +23,61 @@ function generateInfo(id, stat) {
     return newWorker;
 }
 
-function getIntermediateValues(jsonObj, socket, _callback) {
-    //console.log("in getIntVals");
-    var intermediate_values = eval(jsonObj);
-    _callback(intermediate_values, socket);
+function performTask(jsonObj, socket, partition_ref, _callback) { 
+    var map = new Function('data', jsonObj);
+    fs.readFile('./user_files/partitions/' + partition_ref + '.txt', 'utf8', function(err,data) {
+        //Test data failure:
+        //data = "";
+        
+        //Emit failure if no data read in
+        if(!data) {
+            console.log(" ! ! ! ! - FAILURE 1 - ! ! ! !");
+            socket.emit('STATUS_UPDATE', socket.id, "idle");
+            socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");
+        } else {
+            var intermediate_values = map(data);
+            _callback(intermediate_values, socket, partition_ref);          
+        }        
+    });
+    
 };
 
-function emitIntermediateValues(intermediate_values,socket) {   
-    /*intermediate_values.forEach(function(intermediate_value){
-        socket.emit('INTERMEDIATE_VALUE', intermediate_value);
-    });*/
-    
-    //Create an intermediate file: named with worker_id. Worker should append if file already exists
-    var intermediate_obj = { "values" : intermediate_values};
-    var writeable = JSON.stringify(intermediate_obj); 
-    
-    console.log(writeable);
-    
-    fs.writeFile('./intermediate/' + socket.id + '.txt', writeable, function(err) {
-        if(err) {
-            console.log(err);
-            return console.log("Error writing intermediate values to file");
-        } else {
-            socket.emit('STATUS_UPDATE', socket.id, "idle");
-        }
-    });
+function emitIntermediateValues(intermediate_values, socket, partition_ref) {   
+    //In the case of a worker producing no results, consider this as a failed job
+    //console.log(intermediate_values);
+    if(intermediate_values.length == 0) {
+        console.log(" ! ! ! ! - FAILURE 2 - ! ! ! !");
+        socket.emit('STATUS_UPDATE', socket.id, "idle");
+        socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");
+    } else {        
+        //Create an intermediate file: named with worker_id. Worker should append if file already exists
+        var intermediate_obj = { "values" : intermediate_values};
+        var writeable = JSON.stringify(intermediate_obj); 
+        
+        console.log(writeable);
+        
+        fs.writeFile('./intermediate/' + socket.id + '.txt', writeable, function(err) {
+            if(err) {
+                console.log(" ! ! ! ! - FAILURE 3 - ! ! ! !");
+                socket.emit('STATUS_UPDATE', socket.id, "idle");
+                socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");
+            } else {
+                socket.emit('STATUS_UPDATE', socket.id, "idle");
+                socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
+            }
+        });
+    }
     
 }
 
 //Create websocket connection
 var socket = io.connect('http://localhost:8080/');
 
-//These will be browser windows, not servers in the browser.
-//Do not need the server part above: everything done through websocket.
-//Ready to be moved to web browser eventually.
-//Need to get JS from somewhere when running in broswer: could be a file or a website that the master service is running
-//Master.js = node.js process on port 8080
-//Would be another website on different port, which contains a JS file, that browser downloads and JS file does everything got so far (worker nodes etc)
-
 //Send worker info to server on request
 socket.on('REQ_INFO', function(msg) {
     console.log(socket.id + " : Got a 'REQ_INFO' message from server");
     socket.emit('WORKER_INFO', generateInfo(socket.id, "idle"));
 });  
-
-//Parse test JSON object
-socket.on('JSON', function(obj) {
-    console.log("Recieved JSON object to parse: " + obj.code);
-    eval(obj.code);
-});
-
-//Recieve test file
-socket.on('FILE', function(fileObj) {
-    console.log("Recieved File to read.");   
-});
 
 //Perform test task
 socket.on('TASK', function(partition_ref, obj) {
@@ -81,21 +86,17 @@ socket.on('TASK', function(partition_ref, obj) {
     
     //Partition ref refers to an integer corresponding to a partitions filename
     working_partition = './user_files/partitions/' + partition_ref + '.txt';
-    //getIntermediateValues(obj, socket, emitIntermediateValues);
-    
-    /*fs.readFile('./user_files/partitions/1.txt','utf8', function(err, data) {
-        if(err) {
-            return console.log(err);
+    //console.log("Got data:");
+    /*fs.readFile(working_partition, 'utf8', function(err, data) {
+        tests++;
+        if(data.length < 1) {
+            failures++;
         }
-        
-        console.log("Got data:");
-        console.log(data);
+        console.log(failures + "/" + tests + " tests have failed");
     });*/
     
-    working_partition = './user_files/partitions/' + partition_ref + '.txt';
-    var data = fs.readFileSync(working_partition,'utf8');
-    console.log("Read data:");
-    console.log(data);
     
-    socket.emit('STATUS_UPDATE', socket.id, "idle");
+    performTask(obj, socket, partition_ref, emitIntermediateValues);
+    //socket.emit('STATUS_UPDATE', socket.id, "idle");
+    
 });

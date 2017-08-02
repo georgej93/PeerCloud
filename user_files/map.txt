@@ -1,41 +1,26 @@
-var map = function() {
-    var fileRW = require('fs');
+//console.log("Executing map.txt");
 
-    //console.log("Executing map.txt");
+//MAP.JS: performs a wordcount on partitioned data
 
-    //MAP.JS: reads data from partitions and performs a wordcount
+//Code Requirements: temporary to allow partition.js to run isolated (?)
+//var working_partition = './user_files/partitions/1.txt';
 
-    //Code Requirements: temporary to allow partition.js to run isolated (?)
-    var fs = require('fs');
-    //var working_partition = './user_files/partitions/1.txt';
+//Get data from partition and put into a list.
+var data_list = data.split('\r\n');
+      
+//Generate the word counts for all words within data
+//Counts is an associative array: the word is the index
+var list = []; var counts = {};
+data_list.forEach(function(word){
+   counts[word] = (counts[word] || 0) + 1;
+});
 
-    //Get data from partition and put into a list.
-    //console.log("Attempting to read from",working_partition);
-    fileRW.readFileSync(working_partition,'utf8');
-        
-    console.log("Got data:");
-    console.log(data);
+//Combine the words and the counts together into a single list to return
+for(var k in counts){
+    if(k.length > 0) {
+        list.push([k, counts[k]]);      
+    }
+} 
 
-    var data_list = data.split('\r\n');
-    //console.log("Got data_list:");
-    //console.log(data_list);
-          
-    //Generate the word counts for all words within data
-    //Counts is an associative array: the word is the index
-    var list = []; var counts = {};
-    data_list.forEach(function(word){
-       counts[word] = (counts[word] || 0) + 1;
-    });
-
-    //Combine the words and the counts together into a single list to return
-    for(var k in counts){
-       list.push([k, counts[k]]);
-    } 
-    
-    //console.log("Returning a list");
-    return list;  
- 
-    
-}
-
-map();
+//console.log("Returning a list");
+return list;  
