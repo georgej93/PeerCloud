@@ -15,6 +15,17 @@
             <input type="text" name="filename"><br>
             <button type="submit">Testing Wordcount</button>
         </form>
+        
+        <button onclick="createBrowse()">Upload Input File</button>
+
+        <script>
+        function createBrowse() {
+            var x = document.createElement("INPUT");
+            x.setAttribute("type", "file");
+            document.body.appendChild(x);
+        }
+        </script>
+        
     </body>
     
 </html>
