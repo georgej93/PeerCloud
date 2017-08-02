@@ -10,7 +10,9 @@
 
 var fs = require('fs');
 var user_filename;
+var user_map;
 var partitions = 0;
+var completed = 0;
 
 var express = require('express');
 var path = require('path');
@@ -28,7 +30,8 @@ const adminNamespace = io.of('/');
 
 //book-keeping variables: redundant now? (websockets working?)
 //not even using the port number of workers anymore? => using client id
-var activeWorkers = [];
+var activeWorkers    = [];
+var activePartitions = [];
 var id_tracker = 0;
 var data;
 
@@ -36,12 +39,14 @@ var data;
 function findIdleWorker(callback) {
     var idle_worker_found = 0;
     var n = 0;
-    console.log("Attempting to find idle worker");
+    console.log("Attempting to find idle worker from following workers:");
+    console.log(activeWorkers);
     
     while(idle_worker_found == 0 && n<activeWorkers.length) {
         if(activeWorkers[n].worker_status === "idle") {
             idle_worker_found = 1;
             callback(activeWorkers[n].worker_id);
+            //return activeWorkers[n].worker_id;
         }   
         n++;
     }
@@ -50,8 +55,33 @@ function findIdleWorker(callback) {
     //console.log("No idle workers avilable to take task");   
 }
 
-function partitionData(err,data) {  
-    var user_map = fs.readFileSync('./user_files/map.txt','utf8');
+
+var distributePartition = function (partition_ref, user_map) {
+    console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
+
+    var send_obj = JSON.parse(JSON.stringify(user_map));
+                        
+    findIdleWorker(function(idle_worker_id) {
+        console.log("IDLE WORKER:", idle_worker_id);
+        
+        activeWorkers.forEach(function(worker) {
+            if(worker.worker_id == idle_worker_id) {
+                updateWorkerStatus(idle_worker_id, "busy");
+            }
+        });
+    
+        io.of('/').clients((error, clients) => {
+            console.log("Sending partition " + partition_ref + " to worker: " + idle_worker_id);
+            io.sockets.connected[idle_worker_id].emit('TASK',partition_ref,send_obj);  
+            activePartitions.push(generatePartitionTracker(idle_worker_id,"handling",partition_ref));
+        });
+    
+    });
+  
+}
+
+function partitionData(err, data) {  
+    user_map = fs.readFileSync('./user_files/map.txt','utf8');
     //console.log("In partition data with data:");
     //console.log(data);
     
@@ -73,15 +103,28 @@ function partitionData(err,data) {
     
     //Determine word allocation across the number of workers connected
     totalLineCount = split_data.length;
-    //console.log("Read in " + totalLineCount + " lines of data");
     linesPerPartition = Math.ceil(totalLineCount / activeWorkers.length);
-    //console.log("Lines per partition:",linesPerPartition);
-    
+
     //Write lines to file as partitions
     lower = 0; upper = lower+linesPerPartition;
     while(lower+linesPerPartition < totalLineCount) {
+        createPartition(split_data, lower, upper, user_map);
+        
+        lower += linesPerPartition;
+        upper  = lower+linesPerPartition;
+    }
+    
+    //Catch any missed lines due to rounding of lines per partition
+    if(lower<totalLineCount) {
+        createPartition(split_data, lower, totalLineCount, user_map, distributePartition);
+    }
+    
+    console.log("Done partitioning: generated " + partitions + " partitions.");
+}
+
+//Callback here is the distribute function
+function createPartition(split_data, lower, upper, user_map) {
         var lineList = split_data.slice(lower, upper);
-        //console.log("Split from " + lower + " to " + upper + " resulted in: " + lineList);
         var lines = "";
 
         //Prepare lines string to write to file with newline control characters
@@ -90,52 +133,15 @@ function partitionData(err,data) {
         });
         
         //Create Partition
-        fs.writeFile('./user_files/partitions/' + (partitions + 1) + '.txt', lines, function(err) {
+        var partition_ref = partitions + 1;
+        fs.writeFile('./user_files/partitions/' + partition_ref + '.txt', lines, function(err) {
             if(err) {
                 return console.log("Error writing to file from",__dirname);
-            }         
+            }      
+            distributePartition(partition_ref, user_map);
         });
         
-        console.log("INCREMENTING PARITIONS FROM " + partitions + " TO " + (partitions + 1));
         partitions++; 
-        distributePartition(partitions, user_map);
-        
-        lower += linesPerPartition;
-        upper  = lower+linesPerPartition;
-    }
-    
-    //Catch any missed lines due to rounding of lines per partition
-    if(lower<totalLineCount) {
-        var lineList = split_data.slice(lower,totalLineCount); 
-        var lines = "";
-        
-        lineList.forEach(function(line) {
-            lines += line + "\r\n";
-        });
-        
-        fs.writeFile('./user_files/partitions/' + (partitions + 1) + '.txt', lines, function(err) {
-            if(err) {
-                return console.log("Error writing to file from",__dirname);
-            }        
-        });
-        
-        console.log("INCREMENTING PARITIONS FROM " + partitions + " TO " + (partitions + 1));
-        partitions++; 
-        distributePartition(partitions,user_map);
-    }
-    
-    console.log("Done partitioning: generated " + partitions + " partitions.");
-    
-    var data1 = fs.readFile('./user_files/partitions/1.txt','utf8',checkData);
-    var data2 = fs.readFile('./user_files/partitions/2.txt','utf8',checkData);
-    var data3 = fs.readFile('./user_files/partitions/3.txt','utf8',checkData);
-
-    //distributePartitions();
-}
-
-function checkData(err, data) {
-    console.log("===============DATA READ TEST===============");
-    console.log(data);
 }
 
 function clearData() {
@@ -157,29 +163,45 @@ function clearData() {
     
 }
 
-function distributePartition(partition_ref, user_map) {
-    console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
-
-    var send_obj = JSON.parse(JSON.stringify(user_map));
-    console.log("       FLAG 1:",partition_ref);
-                        
-    findIdleWorker(function(idle_worker_id) {
-        console.log("       FLAG 2:",partition_ref);
-        console.log("IDLE WORKER:", idle_worker_id);
-        
-        activeWorkers.forEach(function(worker) {
-            if(worker.worker_id == idle_worker_id) {
-                activeWorkers[activeWorkers.indexOf(worker)].worker_status = "busy";                  
-            }
-        });
-    
-        io.of('/').clients((error, clients) => {
-            console.log("Sending partition " + partition_ref + " to worker: " + idle_worker_id);
-            io.sockets.connected[idle_worker_id].emit('TASK',partition_ref,send_obj);                    
-        });
-    
+function updateWorkerStatus(worker_id, new_status) {
+    console.log("Updating " + worker_id + " status to " + new_status + " from:");
+    activeWorkers.forEach(function(worker) {
+        if(worker.worker_id == worker_id) {
+            console.log(activeWorkers[activeWorkers.indexOf(worker)].worker_status);
+            activeWorkers[activeWorkers.indexOf(worker)].worker_status = new_status;                  
+        }
     });
-  
+}
+
+function updatePartitionTracker(sender_id, partition_reference, new_status) {
+    activePartitions.forEach(function(partition) {
+        if(partition.recipient_id == sender_id) {
+            if(partition.partition_ref == partition_reference) {
+                switch(new_status) {
+                    //Partition completed: keep running total of completed and remove from tracker
+                    case 'done'    : console.log("Partition " + partition_reference + " returned sucessfully");
+                                     completed++;
+                                     activePartitions.splice(activePartitions.indexOf(partition), 1);
+                                     break;
+                    //Attempt to redistribute any failed partitions
+                    case 'failure' : distributePartition(partition_reference, user_map);
+                                     break;
+                }
+                partition.partition_status = new_status;
+            }
+        }
+    });
+
+}
+
+function generatePartitionTracker(id, stat, part_ref) {
+    var newPartition = {
+        recipient_id: id, 
+        partition_status: stat,
+        partition_ref: part_ref
+    };  
+    
+    return newPartition;
 }
 
 server.listen(8080, function() {
@@ -192,19 +214,17 @@ app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname+'/public/index.html'));
 });
 
-app.get('/register-worker', function(req, res) {
-    //Create and log a new worker: 0 parameter generates random free port
-    //worker.createWorker(0);
-    
-    res.sendFile(path.join(__dirname+'/public/register_worker.html')); 
-});
-
-app.get('/worker-log', function(req, res) {
+app.get('/worker-tracker', function(req, res) {
     //View pool of sockets connected to Master
     io.of('/').clients((error, clients) => {
         if(error) throw error;
         res.send(activeWorkers);
     });  
+});
+
+app.get('/partition-tracker', function(req, res) {
+    //View pool of sockets connected to Master
+    res.send(activePartitions);
 });
 
 //WORKER EVENTS:
@@ -239,30 +259,14 @@ io.on('connect', (socket) => {
     
     //Update Worker Status
     socket.on('STATUS_UPDATE', function(worker_id, new_status) {
-        console.log("Updating " + worker_id + " status to " + new_status + " from:");
-        activeWorkers.forEach(function(worker) {
-            if(worker.worker_id == socket.id) {
-                console.log(activeWorkers[activeWorkers.indexOf(worker)].worker_status);
-                activeWorkers[activeWorkers.indexOf(worker)].worker_status = new_status;
-            }
-        });
+        updateWorkerStatus(worker_id, new_status);
     });   
-});
-
-//TEST FUNCTIONS =========================
-//What worker needs to recieve:
-// -  map code to apply to contents of file
-//What worker needs to return:
-// - emit intermediate result
-app.get('/file-test', function(req, res) {
-    var filename = './user_files/input.txt';
-    io.of('/').clients((error, clients) => {
-        if(error) throw error;
-        console.log("Server sending file: " + filename);
-        //var fileObj = {"msg":"FILE" , ""}
-        io.sockets.connected[clients[0]].emit('REQ_INFO');
+    
+    //Update partition tracker
+    socket.on('PARTITION_UPDATE', function(worker_id, partition_ref, partition_status) {
+        updatePartitionTracker(worker_id, partition_ref, partition_status);
     });
-    res.redirect('/');
+    
 });
 
 //Currently, filename is assumed to be locally stored and is collected through a text box on browser
@@ -274,20 +278,18 @@ app.post('/send-filename', function(req,res) {
 });
 
 app.get('/wordcount-test', function(req,res) {   
-    //clearData();
+    clearData();
 
     //User uploaded file: input.txt
     //Distribution is performed in function called in partitionData
     console.log("Beginning to read user file");
     var filename = './user_files/input.txt';
-    partitions = 0;
+    partitions = 0; 
+    var err = '';
     data = fs.readFile(filename,'utf8',partitionData);
  
-    res.redirect('/');
-});
-
-/*function distributePartitions() {
-    //Send task to worker to perform
+    /*partitions = 5;
+    //Send tasks to workers to perform
     var filename = './user_files/map.txt';
     var toSend = fs.readFileSync(filename,'utf8');
     var obj = JSON.parse(JSON.stringify(toSend));
@@ -299,6 +301,7 @@ app.get('/wordcount-test', function(req,res) {
             return console.log("Failed to allocate partitions: no partitions created");
         }
         
+        
         //Distribute all partitions amongst workers if possible
         for(i=1 ; i<=partitions ; i++) {
             //console.log(activeWorkers);
@@ -307,12 +310,11 @@ app.get('/wordcount-test', function(req,res) {
 
             if(idle_worker_id != 0) {
                 console.log("IDLE WORKER:", idle_worker_id);
-                //activeWorkers[activeWorkers.indexOf(idle_worker_id)].worker_status = "busy";
             
                 //Set worker status to busy
                 activeWorkers.forEach(function(worker) {
                     if(worker.worker_id == idle_worker_id) {
-                        activeWorkers[activeWorkers.indexOf(worker)].worker_status = "busy";
+                        updateWorkerStatus(idle_worker_id, "busy");
                     }
                 });
                 
@@ -322,5 +324,7 @@ app.get('/wordcount-test', function(req,res) {
                 console.log("No idle workers avilable to take task");
             }            
         }
-    });
-}*/
+    });*/
+    
+    res.redirect('/');
+});
