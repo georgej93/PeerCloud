@@ -18,10 +18,12 @@ var express = require('express');
 var path = require('path');
 var app = express();
 
-//Body Parser
+//Body Parser & File Handling
 var bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+const fileUpload = require('express-fileupload');
+app.use(fileUpload());
 
 //socket.io module requirements: https://www.npmjs.com/package/socket.io
 var server = require('http').createServer(app);
@@ -54,7 +56,6 @@ function findIdleWorker(callback) {
     //return 0;
     //console.log("No idle workers avilable to take task");   
 }
-
 
 var distributePartition = function (partition_ref, user_map) {
     console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
@@ -276,6 +277,29 @@ app.post('/send-filename', function(req,res) {
     user_filename = './user_files/' + req.body.filename;
     res.redirect('/wordcount-test');
 });
+
+app.post('/upload', function(req, res) {
+    console.log("User input was uploaded");
+    let dataFile   = req.files.data;
+    let mapFile    = req.files.map;
+    let reduceFile = req.files.reduce;
+    let configFile = req.files.config;
+    
+    var path = './user_files/';    
+    moveFile(dataFile, path + 'input.txt');
+    moveFile(mapFile, path + 'map.txt');
+    moveFile(reduceFile, path + 'reduce.txt');
+    moveFile(configFile, path + 'config.txt');
+    
+    res.redirect('/');
+});
+
+function moveFile(file, path) {
+    console.log("Moving file:", file.name);
+    file.mv(path, function(err) {
+        if(err) return(err);
+    });
+}
 
 app.get('/wordcount-test', function(req,res) {   
     clearData();

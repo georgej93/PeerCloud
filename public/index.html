@@ -1,5 +1,4 @@
 <html>
-
     <body>
         <h1>Master Homepage</h1>
                
@@ -12,9 +11,17 @@
         </form>
         
         <form action="/send-filename" method="post">
-            <input type="text" name="filename"><br>
             <button type="submit">Testing Wordcount</button>
         </form>
+        
+        <form ref='uploadForm' id='uploadForm' action="/upload" method="post" encType="multipart/form-data">
+            Input Data :  <input type="file" name="data"   /> <br>    
+            Map Code :    <input type="file" name="map"/> <br>
+            Reduce Code : <input type="file" name="reduce" /> <br>
+            Config File : <input type="file" name="config" /> <br>
+            <input type='submit' value='Submit Files'/>
+        </form>
+        
     </body>
     
 </html>
