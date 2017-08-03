@@ -9,7 +9,6 @@
 //Message recieving solution: https://stackoverflow.com/questions/26061335/express-with-socket-io-server-doesnt-receive-emits-from-client
 
 var fs = require('fs');
-var user_filename;
 var user_map;
 var partitions = 0;
 var completed = 0;
@@ -270,28 +269,34 @@ io.on('connect', (socket) => {
     
 });
 
-//Currently, filename is assumed to be locally stored and is collected through a text box on browser
-//=> Will need to be a file upload
-app.post('/send-filename', function(req,res) {
-    //Lacks validation: invalid files crash page
-    user_filename = './user_files/' + req.body.filename;
-    res.redirect('/wordcount-test');
-});
-
 app.post('/upload', function(req, res) {
-    console.log("User input was uploaded");
-    let dataFile   = req.files.data;
-    let mapFile    = req.files.map;
-    let reduceFile = req.files.reduce;
-    let configFile = req.files.config;
+    let config_mode = false;
     
-    var path = './user_files/';    
-    moveFile(dataFile, path + 'input.txt');
-    moveFile(mapFile, path + 'map.txt');
-    moveFile(reduceFile, path + 'reduce.txt');
-    moveFile(configFile, path + 'config.txt');
-    
-    res.redirect('/');
+    if(!req.files.data || !req.files.map || !req.files.reduce) {
+        console.log("User input upload failed");
+        res.send("Error: input data, map code or reduce code not provided");
+    } else {
+        let dataFile   = req.files.data;
+        let mapFile    = req.files.map;
+        let reduceFile = req.files.reduce;
+        
+        if(req.files.config) {
+            config_mode = true;
+            let configFile = req.files.config;
+        }
+        
+        //Move files to user_files directory
+        var path = './user_files/';    
+        moveFile(dataFile, path + 'input.txt');
+        moveFile(mapFile, path + 'map.txt');
+        moveFile(reduceFile, path + 'reduce.txt');
+        
+        if(config_mode) {
+            moveFile(configFile, path + 'config.txt');
+        }
+        console.log("User input was uploaded");
+        res.redirect('/');
+    }
 });
 
 function moveFile(file, path) {
@@ -301,13 +306,24 @@ function moveFile(file, path) {
     });
 }
 
+app.get('/submit', function(req, res) {
+    clearData();
+    
+    //User uploaded file: input.txt
+    //Distribution is performed in function called in partitionData
+    console.log("Beginning to read user file");
+    var filename = './user_files/input.txt';
+    partitions = 0; 
+    data = fs.readFile(filename,'utf8',partitionData);
+});
+
 app.get('/wordcount-test', function(req,res) {   
     clearData();
 
     //User uploaded file: input.txt
     //Distribution is performed in function called in partitionData
     console.log("Beginning to read user file");
-    var filename = './user_files/input.txt';
+    var filename = './user_files/wordcount.txt';
     partitions = 0; 
     var err = '';
     data = fs.readFile(filename,'utf8',partitionData);
