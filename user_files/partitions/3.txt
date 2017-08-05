@@ -1,9 +1,3 @@
-hello
-from
-across
-the
-way
-today
 is
 such
 a
@@ -9998,3 +9992,9 @@ swim
 i
 dance
 i
+bound
+and
+play
+and
+pray
+god

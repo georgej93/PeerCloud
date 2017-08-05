@@ -116,7 +116,7 @@ function partitionData(err, data) {
     
     //Catch any missed lines due to rounding of lines per partition
     if(lower<totalLineCount) {
-        createPartition(split_data, lower, totalLineCount, user_map, distributePartition);
+        createPartition(split_data, lower, totalLineCount, user_map);
     }
     
     console.log("Done partitioning: generated " + partitions + " partitions.");
@@ -182,6 +182,10 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
                     case 'done'    : console.log("Partition " + partition_reference + " returned sucessfully");
                                      completed++;
                                      activePartitions.splice(activePartitions.indexOf(partition), 1);
+                                     if(completed == partitions) {
+                                        console.log(completed + "/" + partitions + " partitions returned, starting reduce ====================================");
+                                        
+                                     }
                                      break;
                     //Attempt to redistribute any failed partitions
                     case 'failure' : distributePartition(partition_reference, user_map);
@@ -313,7 +317,7 @@ app.get('/submit', function(req, res) {
     //Distribution is performed in function called in partitionData
     console.log("Beginning to read user file");
     var filename = './user_files/input.txt';
-    partitions = 0; 
+    partitions = 0; completed = 0;
     data = fs.readFile(filename,'utf8',partitionData);
 });
 
@@ -322,49 +326,10 @@ app.get('/wordcount-test', function(req,res) {
 
     //User uploaded file: input.txt
     //Distribution is performed in function called in partitionData
-    console.log("Beginning to read user file");
+    console.log("Beginning to read wordcount file");
     var filename = './user_files/wordcount.txt';
-    partitions = 0; 
-    var err = '';
+    partitions = 0; completed = 0;
     data = fs.readFile(filename,'utf8',partitionData);
  
-    /*partitions = 5;
-    //Send tasks to workers to perform
-    var filename = './user_files/map.txt';
-    var toSend = fs.readFileSync(filename,'utf8');
-    var obj = JSON.parse(JSON.stringify(toSend));
-
-    io.of('/').clients((error, clients) => {
-        if(error) throw error;
-        
-        if(partitions==0) {
-            return console.log("Failed to allocate partitions: no partitions created");
-        }
-        
-        
-        //Distribute all partitions amongst workers if possible
-        for(i=1 ; i<=partitions ; i++) {
-            //console.log(activeWorkers);
-            
-            var idle_worker_id = findIdleWorker();
-
-            if(idle_worker_id != 0) {
-                console.log("IDLE WORKER:", idle_worker_id);
-            
-                //Set worker status to busy
-                activeWorkers.forEach(function(worker) {
-                    if(worker.worker_id == idle_worker_id) {
-                        updateWorkerStatus(idle_worker_id, "busy");
-                    }
-                });
-                
-                console.log("Sending partition " + i + " to worker: " + idle_worker_id);
-                io.sockets.connected[idle_worker_id].emit('TASK',i,obj);                  
-            } else {
-                console.log("No idle workers avilable to take task");
-            }            
-        }
-    });*/
-    
     res.redirect('/');
 });
