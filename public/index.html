@@ -1,20 +1,33 @@
 <html>
-
     <body>
         <h1>Master Homepage</h1>
                
         <form action="/worker-tracker" method="get">
-            <button type="submit">View Worker Tracker</button>
+            <button type="submit">Worker Tracker</button>
         </form>
         
         <form action="/partition-tracker" method="get">
-            <button type="submit">View Partition Tracker</button>
+            <button type="submit">Partition Tracker</button>
         </form>
         
-        <form action="/send-filename" method="post">
-            <input type="text" name="filename"><br>
+        <form ref='uploadForm' id='uploadForm' action="/upload" method="post" encType="multipart/form-data">
+            Input Data :  <input type="file" name="data"   /> <br>    
+            Map Code :    <input type="file" name="map"/> <br>
+            Reduce Code : <input type="file" name="reduce" /> <br>
+            Config File : <input type="file" name="config" /> <br>
+            <input type='submit' value='Submit Files'/>
+        </form>
+        
+        <form action="/submit" method="get">
+            <button type="submit">Submit Job</button>
+        </form>
+        
+        ------------------- Testing ----------------------- <br>
+        For testing purposes only: will not feature in final version <br>
+        <form action="/wordcount-test" method="get">
             <button type="submit">Testing Wordcount</button>
         </form>
+        
     </body>
     
 </html>

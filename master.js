@@ -9,7 +9,6 @@
 //Message recieving solution: https://stackoverflow.com/questions/26061335/express-with-socket-io-server-doesnt-receive-emits-from-client
 
 var fs = require('fs');
-var user_filename;
 var user_map;
 var partitions = 0;
 var completed = 0;
@@ -18,10 +17,12 @@ var express = require('express');
 var path = require('path');
 var app = express();
 
-//Body Parser
+//Body Parser & File Handling
 var bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+const fileUpload = require('express-fileupload');
+app.use(fileUpload());
 
 //socket.io module requirements: https://www.npmjs.com/package/socket.io
 var server = require('http').createServer(app);
@@ -54,7 +55,6 @@ function findIdleWorker(callback) {
     //return 0;
     //console.log("No idle workers avilable to take task");   
 }
-
 
 var distributePartition = function (partition_ref, user_map) {
     console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
@@ -116,7 +116,7 @@ function partitionData(err, data) {
     
     //Catch any missed lines due to rounding of lines per partition
     if(lower<totalLineCount) {
-        createPartition(split_data, lower, totalLineCount, user_map, distributePartition);
+        createPartition(split_data, lower, totalLineCount, user_map);
     }
     
     console.log("Done partitioning: generated " + partitions + " partitions.");
@@ -182,6 +182,10 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
                     case 'done'    : console.log("Partition " + partition_reference + " returned sucessfully");
                                      completed++;
                                      activePartitions.splice(activePartitions.indexOf(partition), 1);
+                                     if(completed == partitions) {
+                                        console.log(completed + "/" + partitions + " partitions returned, starting reduce ====================================");
+                                        
+                                     }
                                      break;
                     //Attempt to redistribute any failed partitions
                     case 'failure' : distributePartition(partition_reference, user_map);
@@ -269,12 +273,52 @@ io.on('connect', (socket) => {
     
 });
 
-//Currently, filename is assumed to be locally stored and is collected through a text box on browser
-//=> Will need to be a file upload
-app.post('/send-filename', function(req,res) {
-    //Lacks validation: invalid files crash page
-    user_filename = './user_files/' + req.body.filename;
-    res.redirect('/wordcount-test');
+app.post('/upload', function(req, res) {
+    let config_mode = false;
+    
+    if(!req.files.data || !req.files.map || !req.files.reduce) {
+        console.log("User input upload failed");
+        res.send("Error: input data, map code or reduce code not provided");
+    } else {
+        let dataFile   = req.files.data;
+        let mapFile    = req.files.map;
+        let reduceFile = req.files.reduce;
+        
+        if(req.files.config) {
+            config_mode = true;
+            let configFile = req.files.config;
+        }
+        
+        //Move files to user_files directory
+        var path = './user_files/';    
+        moveFile(dataFile, path + 'input.txt');
+        moveFile(mapFile, path + 'map.txt');
+        moveFile(reduceFile, path + 'reduce.txt');
+        
+        if(config_mode) {
+            moveFile(configFile, path + 'config.txt');
+        }
+        console.log("User input was uploaded");
+        res.redirect('/');
+    }
+});
+
+function moveFile(file, path) {
+    console.log("Moving file:", file.name);
+    file.mv(path, function(err) {
+        if(err) return(err);
+    });
+}
+
+app.get('/submit', function(req, res) {
+    clearData();
+    
+    //User uploaded file: input.txt
+    //Distribution is performed in function called in partitionData
+    console.log("Beginning to read user file");
+    var filename = './user_files/input.txt';
+    partitions = 0; completed = 0;
+    data = fs.readFile(filename,'utf8',partitionData);
 });
 
 app.get('/wordcount-test', function(req,res) {   
@@ -282,49 +326,10 @@ app.get('/wordcount-test', function(req,res) {
 
     //User uploaded file: input.txt
     //Distribution is performed in function called in partitionData
-    console.log("Beginning to read user file");
-    var filename = './user_files/input.txt';
-    partitions = 0; 
-    var err = '';
+    console.log("Beginning to read wordcount file");
+    var filename = './user_files/wordcount.txt';
+    partitions = 0; completed = 0;
     data = fs.readFile(filename,'utf8',partitionData);
  
-    /*partitions = 5;
-    //Send tasks to workers to perform
-    var filename = './user_files/map.txt';
-    var toSend = fs.readFileSync(filename,'utf8');
-    var obj = JSON.parse(JSON.stringify(toSend));
-
-    io.of('/').clients((error, clients) => {
-        if(error) throw error;
-        
-        if(partitions==0) {
-            return console.log("Failed to allocate partitions: no partitions created");
-        }
-        
-        
-        //Distribute all partitions amongst workers if possible
-        for(i=1 ; i<=partitions ; i++) {
-            //console.log(activeWorkers);
-            
-            var idle_worker_id = findIdleWorker();
-
-            if(idle_worker_id != 0) {
-                console.log("IDLE WORKER:", idle_worker_id);
-            
-                //Set worker status to busy
-                activeWorkers.forEach(function(worker) {
-                    if(worker.worker_id == idle_worker_id) {
-                        updateWorkerStatus(idle_worker_id, "busy");
-                    }
-                });
-                
-                console.log("Sending partition " + i + " to worker: " + idle_worker_id);
-                io.sockets.connected[idle_worker_id].emit('TASK',i,obj);                  
-            } else {
-                console.log("No idle workers avilable to take task");
-            }            
-        }
-    });*/
-    
     res.redirect('/');
 });
