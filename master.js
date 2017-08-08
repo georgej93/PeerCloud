@@ -10,6 +10,7 @@
 
 var fs = require('fs');
 var user_map;
+var user_reduce;
 var partitions = 0;
 var completed = 0;
 
@@ -184,7 +185,7 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
                                      activePartitions.splice(activePartitions.indexOf(partition), 1);
                                      if(completed == partitions) {
                                         console.log(completed + "/" + partitions + " partitions returned, starting reduce ====================================");
-                                        
+                                        readIntermediateFiles(reduceResults);
                                      }
                                      break;
                     //Attempt to redistribute any failed partitions
@@ -194,6 +195,44 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
                 partition.partition_status = new_status;
             }
         }
+    });
+
+}
+
+function reduceResults(results) {
+    console.log("In reduce results with collected results:");
+    //console.log(results);
+    fs.readFile('./user_files/reduce.txt', 'utf8', function(err, data) {
+        if(err) { 
+            return console.log(err); 
+        } else {
+            var reduce = new Function('results', JSON.parse(JSON.stringify(data)));
+            var reduced_results = reduce(results);            
+        }
+     
+    });
+    
+}
+
+function readIntermediateFiles(_callback) {
+    var collected_results = [];
+    var files_read = 0;
+    
+    fs.readdir('./intermediate',function(err, files) {
+        if(err) { 
+            return console.log(err); 
+        } else {
+            files.forEach(function(file) {
+                fs.readFile('./intermediate/' + file, function(err, data) {
+                   var obj = JSON.parse(data);
+                   collected_results = collected_results.concat(obj.values);
+                   files_read++;
+                   if(files_read == completed) {
+                       _callback(collected_results);
+                   }
+               });
+            });           
+        }       
     });
 
 }
