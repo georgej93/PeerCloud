@@ -13,6 +13,7 @@ var fs = require('fs');
 var worker_info, id, port, host;
 var working_partition;
 var currently_working = false;
+var partitions_written = 0;
 var task_queue = [];
 
 function generateInfo(id, stat) {
@@ -59,27 +60,30 @@ function emitIntermediateValues(intermediate_values, socket, partition_ref) {
         var intermediate_obj = { 'values' : intermediate_values};
         var writeable = JSON.stringify(intermediate_obj); 
         
-        fs.writeFile('./intermediate/' + socket.id + '.txt', writeable, function(err) {
+        fs.writeFile('./intermediate/' + socket.id + '-' + partitions_written + '.txt', writeable, function(err) {
             socket.emit('STATUS_UPDATE', socket.id, "idle");
             currently_working = false;   
             if(err) {                         
                 console.log(" ! ! ! ! - FAILURE 3 - ! ! ! !");               
                 socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");                
             } else {
+                partitions_written++;
                 socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
             }
-            checkTaskQueue();
+            checkTaskQueue(socket);
         });
     }
     
 }
 
-function checkTaskQueue() {
+function checkTaskQueue(socket) {
     let queue_length = task_queue.length;
     
     if(queue_length > 0) {
-        performTask(task_queue[queue_length - 1].map_obj, task_queue[queue_length - 1].partition_reference, emitIntermediateValues);
-        queue_length.pop();
+        performTask(task_queue[queue_length - 1].map_obj, socket, task_queue[queue_length - 1].partition_reference, emitIntermediateValues);
+        //queue_length.pop();
+        task_queue.pop();
+        //splice(queue_length - 1, 1);
     }
 }
 

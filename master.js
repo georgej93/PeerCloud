@@ -69,6 +69,7 @@ var distributePartition = function (partition_ref, user_map) {
             //Round-Robin Distribution Method: evenly distribute partitions across all workers
             case 'robin' : 
                 let send_to = activeWorkers[last_distributed_to].worker_id;
+                activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
                 updateWorkerStatus(send_to, "busy");
                 io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
                 if(last_distributed_to == activeWorkers.length - 1) {
@@ -188,16 +189,21 @@ function clearData() {
 }
 
 function updateWorkerStatus(worker_id, new_status) {
-    console.log("Updating " + worker_id + " status to " + new_status + " from:");
+    //console.log("Updating " + worker_id + " status to " + new_status + " from:");
     activeWorkers.forEach(function(worker) {
         if(worker.worker_id == worker_id) {
-            console.log(activeWorkers[activeWorkers.indexOf(worker)].worker_status);
+            //console.log(activeWorkers[activeWorkers.indexOf(worker)].worker_status);
             activeWorkers[activeWorkers.indexOf(worker)].worker_status = new_status;                  
         }
     });
 }
 
 function updatePartitionTracker(sender_id, partition_reference, new_status) {
+    /*console.log("In updatePartitionTracker with ref:",partition_reference);
+    console.log("   new_status:", new_status);
+    console.log("   completed:", completed);
+    console.log(activePartitions);*/
+    
     activePartitions.forEach(function(partition) {
         if(partition.recipient_id == sender_id) {
             if(partition.partition_ref == partition_reference) {
