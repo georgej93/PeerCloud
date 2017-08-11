@@ -1,25 +1,16 @@
 //console.log("Executing map.txt");
 
 //MAP.JS: performs an averaging on partitioned data
-
-function findMax(data, _callback) {
-    
-}
-      
 //Get data from partition and put into a list.
 var data_list = data.split('\r\n');
-      
+
 //Generate the word counts for all words within data
 //Counts is an associative array: the word is the index
-var list = []; var counts = {}; var largest = 0;
-
+var list = []; var counts = {}; var sum = 0;
 data_list.forEach(function(num){
-    if(parseInt(num) > largest) {
-        largest = num;
-        console.log("largest:",largest);
-    }
+   sum += parseInt(num);
+   console.log("sum:",sum);
 });
-    
-console.log("Pushed largest num " + largest + " to list");
-list.push(largest);
+
+//console.log("Returning a list");
 return list;  

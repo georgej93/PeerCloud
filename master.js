@@ -12,8 +12,9 @@
 var fs = require('fs');
 
 var user_map; var user_reduce;
-var partitions = 0; var completed = 0;
-var dist_method;
+var partitions = 0  ; var completed = 0;
+var partition_factor; var dist_method;
+var last_distributed_to = 0; //Refers to index of activeWorkers that was last given a partition to handle
 
 var express = require('express');
 var path = require('path');
@@ -62,8 +63,29 @@ var distributePartition = function (partition_ref, user_map) {
     console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
 
     var send_obj = JSON.parse(JSON.stringify(user_map));
-                        
-    findIdleWorker(function(idle_worker_id) {
+           
+    io.of('/').clients((error, clients) => {
+        switch(dist_method) {
+            //Round-Robin Distribution Method: evenly distribute partitions across all workers
+            case 'robin' : 
+                let send_to = activeWorkers[last_distributed_to].worker_id;
+                updateWorkerStatus(send_to, "busy");
+                io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
+                if(last_distributed_to == activeWorkers.length - 1) {
+                    last_distributed_to = 0;
+                } else {
+                    last_distributed_to++;
+                }
+                break;
+            //Random Distribution Method: randomly distribute partitions across all workers
+            case 'random' : break;
+            //Weighted Distribution Method: preferential distribution based on worker history
+            case 'weighted' : break;
+            
+        }
+    });
+               
+    /*findIdleWorker(function(idle_worker_id) {
         console.log("IDLE WORKER:", idle_worker_id);
         
         activeWorkers.forEach(function(worker) {
@@ -78,7 +100,7 @@ var distributePartition = function (partition_ref, user_map) {
             activePartitions.push(generatePartitionTracker(idle_worker_id,"handling",partition_ref));
         });
     
-    });
+    });*/
   
 }
 
@@ -91,7 +113,7 @@ function partitionData(err, data) {
         return console.log("Data partition failed:",err);
     }
     
-    //console.log("Partitioning data based on " + activeWorkers.length + " workers.");
+    console.log("Partitioning data based on partition_factor = ", partition_factor);
     
     var totalLineCount; var linesPerPartition;
     var lower; var upper;
@@ -105,7 +127,7 @@ function partitionData(err, data) {
     
     //Determine word allocation across the number of workers connected
     totalLineCount = split_data.length;
-    linesPerPartition = Math.ceil(totalLineCount / activeWorkers.length);
+    linesPerPartition = Math.ceil(totalLineCount / partition_factor);
 
     //Write lines to file as partitions
     lower = 0; upper = lower+linesPerPartition;
@@ -315,7 +337,9 @@ app.post('/upload', function(req, res) {
     let config_mode = false;
     //Possible dist_methods: robin, random, weighted.
     dist_method = req.body.dist_method;
+    partition_factor = parseInt(req.body.partition_factor);
     console.log("dist_method set to:", dist_method);
+    console.log("partition_factor set to:", partition_factor);
     
     if(!req.files.data || !req.files.map || !req.files.reduce) {
         console.log("User input upload failed");
