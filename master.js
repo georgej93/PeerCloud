@@ -11,10 +11,9 @@
 //File Reading Variables:
 var fs = require('fs');
 
-var user_map;
-var user_reduce;
-var partitions = 0;
-var completed = 0;
+var user_map; var user_reduce;
+var partitions = 0; var completed = 0;
+var dist_method;
 
 var express = require('express');
 var path = require('path');
@@ -254,8 +253,6 @@ server.listen(8080, function() {
 });
 
 app.get('/', function(req, res) {
-    //console.log('get route', req.testing);
-    //res.end();
     res.sendFile(path.join(__dirname+'/public/index.html'));
 });
 
@@ -316,6 +313,9 @@ io.on('connect', (socket) => {
 
 app.post('/upload', function(req, res) {
     let config_mode = false;
+    //Possible dist_methods: robin, random, weighted.
+    dist_method = req.body.dist_method;
+    console.log("dist_method set to:", dist_method);
     
     if(!req.files.data || !req.files.map || !req.files.reduce) {
         console.log("User input upload failed");
