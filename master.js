@@ -61,14 +61,14 @@ function findIdleWorker(callback) {
 
 var distributePartition = function (partition_ref, user_map) {
     console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
-
+    var send_to;
     var send_obj = JSON.parse(JSON.stringify(user_map));
-           
+   
     io.of('/').clients((error, clients) => {
         switch(dist_method) {
             //Round-Robin Distribution Method: evenly distribute partitions across all workers
             case 'robin' : 
-                let send_to = activeWorkers[last_distributed_to].worker_id;
+                send_to = activeWorkers[last_distributed_to].worker_id;
                 activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
                 updateWorkerStatus(send_to, "busy");
                 io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
@@ -79,7 +79,12 @@ var distributePartition = function (partition_ref, user_map) {
                 }
                 break;
             //Random Distribution Method: randomly distribute partitions across all workers
-            case 'random' : break;
+            case 'random' : 
+                send_to = activeWorkers[Math.floor(Math.random() * activeWorkers.length)].worker_id;
+                activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
+                updateWorkerStatus(send_to, "busy");
+                io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
+                break;
             //Weighted Distribution Method: preferential distribution based on worker history
             case 'weighted' : break;
             
