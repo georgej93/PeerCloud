@@ -8,7 +8,9 @@
 //https://stackoverflow.com/questions/24041220/sending-message-to-a-specific-id-in-socket-io-1-0
 //Message recieving solution: https://stackoverflow.com/questions/26061335/express-with-socket-io-server-doesnt-receive-emits-from-client
 
+//File Reading Variables:
 var fs = require('fs');
+
 var user_map;
 var user_reduce;
 var partitions = 0;
@@ -367,6 +369,19 @@ app.get('/wordcount-test', function(req,res) {
     //Distribution is performed in function called in partitionData
     console.log("Beginning to read wordcount file");
     var filename = './user_files/wordcount.txt';
+    partitions = 0; completed = 0;
+    data = fs.readFile(filename,'utf8',partitionData);
+ 
+    res.redirect('/');
+});
+
+app.get('/averaging-test', function(req,res) {   
+    clearData();
+
+    //User uploaded file: input.txt
+    //Distribution is performed in function called in partitionData
+    console.log("Beginning to read averaging file");
+    var filename = './user_files/averaging.txt';
     partitions = 0; completed = 0;
     data = fs.readFile(filename,'utf8',partitionData);
  

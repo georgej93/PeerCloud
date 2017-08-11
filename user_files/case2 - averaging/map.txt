@@ -1,0 +1,14 @@
+//console.log("Executing map.txt");
+
+//MAP.JS: performs an averaging on partitioned data
+      
+//Generate the word counts for all words within data
+//Counts is an associative array: the word is the index
+var list = []; var counts = {}; var sum = 0;
+data_list.forEach(function(num){
+   sum += parseInt(num);
+   console.log("sum:",sum);
+});
+
+//console.log("Returning a list");
+return list;  
