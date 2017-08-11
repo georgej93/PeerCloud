@@ -8,8 +8,11 @@
 //https://stackoverflow.com/questions/24041220/sending-message-to-a-specific-id-in-socket-io-1-0
 //Message recieving solution: https://stackoverflow.com/questions/26061335/express-with-socket-io-server-doesnt-receive-emits-from-client
 
+//File Reading Variables:
 var fs = require('fs');
+
 var user_map;
+var user_reduce;
 var partitions = 0;
 var completed = 0;
 
@@ -184,7 +187,7 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
                                      activePartitions.splice(activePartitions.indexOf(partition), 1);
                                      if(completed == partitions) {
                                         console.log(completed + "/" + partitions + " partitions returned, starting reduce ====================================");
-                                        
+                                        readIntermediateFiles(reduceResults);
                                      }
                                      break;
                     //Attempt to redistribute any failed partitions
@@ -194,6 +197,44 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
                 partition.partition_status = new_status;
             }
         }
+    });
+
+}
+
+function reduceResults(results) {
+    console.log("In reduce results with collected results:");
+    //console.log(results);
+    fs.readFile('./user_files/reduce.txt', 'utf8', function(err, data) {
+        if(err) { 
+            return console.log(err); 
+        } else {
+            var reduce = new Function('results', JSON.parse(JSON.stringify(data)));
+            var reduced_results = reduce(results);            
+        }
+     
+    });
+    
+}
+
+function readIntermediateFiles(_callback) {
+    var collected_results = [];
+    var files_read = 0;
+    
+    fs.readdir('./intermediate',function(err, files) {
+        if(err) { 
+            return console.log(err); 
+        } else {
+            files.forEach(function(file) {
+                fs.readFile('./intermediate/' + file, function(err, data) {
+                   var obj = JSON.parse(data);
+                   collected_results = collected_results.concat(obj.values);
+                   files_read++;
+                   if(files_read == completed) {
+                       _callback(collected_results);
+                   }
+               });
+            });           
+        }       
     });
 
 }
@@ -328,6 +369,19 @@ app.get('/wordcount-test', function(req,res) {
     //Distribution is performed in function called in partitionData
     console.log("Beginning to read wordcount file");
     var filename = './user_files/wordcount.txt';
+    partitions = 0; completed = 0;
+    data = fs.readFile(filename,'utf8',partitionData);
+ 
+    res.redirect('/');
+});
+
+app.get('/averaging-test', function(req,res) {   
+    clearData();
+
+    //User uploaded file: input.txt
+    //Distribution is performed in function called in partitionData
+    console.log("Beginning to read averaging file");
+    var filename = './user_files/averaging.txt';
     partitions = 0; completed = 0;
     data = fs.readFile(filename,'utf8',partitionData);
  

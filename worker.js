@@ -51,7 +51,7 @@ function emitIntermediateValues(intermediate_values, socket, partition_ref) {
         socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");
     } else {        
         //Create an intermediate file: named with worker_id. Worker should append if file already exists
-        var intermediate_obj = { "values" : intermediate_values};
+        var intermediate_obj = { 'values' : intermediate_values};
         var writeable = JSON.stringify(intermediate_obj); 
         
         console.log(writeable);

@@ -1,1 +1,10 @@
-reduce will go here
+var i=0; var maxNum = 0;
+while(i<results.length) {
+    if(results[i] > maxNum) {
+        maxNum = results[i]
+    }
+    i++;
+}
+
+console.log("Final Result: maxNum is", maxNum);
+return maxNum;
