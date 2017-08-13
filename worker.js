@@ -13,13 +13,14 @@ var fs = require('fs');
 var worker_info, id, port, host;
 var working_partition;
 var currently_working = false;
-var partitions_written = 0;
+var intermediates_written = 0;
 var task_queue = [];
 
 function generateInfo(id, stat) {
     var newWorker = {
         worker_id: id, 
         worker_status: stat,
+        worker_rep: 1.0,
         worker_partition: 0
     };
     
@@ -37,7 +38,8 @@ function performTask(jsonObj, socket, partition_ref, _callback) {
             console.log(" ! ! ! ! - FAILURE 1 - ! ! ! !");
             socket.emit('STATUS_UPDATE', socket.id, "idle");
             currently_working = false;   
-            socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");
+            socket.emit('PARTITION_UPDATE' , socket.id, partition_ref, "failure");
+            socket.emit('REPUTATION_UPDATE', socket.id, "decrease"); 
         } else {
             var intermediate_values = map(data);
             _callback(intermediate_values, socket, partition_ref);          
@@ -54,20 +56,24 @@ function emitIntermediateValues(intermediate_values, socket, partition_ref) {
         socket.emit('STATUS_UPDATE', socket.id, "idle");
         currently_working = false;   
         socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");
+        socket.emit('REPUTATION_UPDATE', socket.id, "decrease"); 
         checkTaskQueue();
     } else {        
         //Create an intermediate file: named with worker_id. Worker should append if file already exists
         var intermediate_obj = { 'values' : intermediate_values};
         var writeable = JSON.stringify(intermediate_obj); 
         
-        fs.writeFile('./intermediate/' + socket.id + '-' + partitions_written + '.txt', writeable, function(err) {
+        var intermediate_filename = './intermediate/' + socket.id + '-' + intermediates_written + '.txt';
+        intermediates_written++;
+        fs.writeFile(intermediate_filename, writeable, function(err) {
             socket.emit('STATUS_UPDATE', socket.id, "idle");
             currently_working = false;   
             if(err) {                         
                 console.log(" ! ! ! ! - FAILURE 3 - ! ! ! !");               
-                socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");                
-            } else {
-                partitions_written++;
+                socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");        
+                socket.emit('REPUTATION_UPDATE', socket.id, "decrease");               
+            } else {               
+                console.log("Intermediate file written:",intermediate_filename);
                 socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
             }
             checkTaskQueue(socket);
@@ -103,19 +109,25 @@ socket.on('TASK', function(partition_ref, obj) {
     //Partition ref refers to an integer corresponding to a partitions filename
     console.log("Recieved task from server - partition:", partition_ref);
     
-    working_partition = './user_files/partitions/' + partition_ref + '.txt';
-    if(task_queue.length > 0 || currently_working) {
-        //Push new task to queue if there are existing tasks in queue or worker is doing something      
-        let queued_task = {partition_reference : partition_ref,
-                           map_obj : obj
-                          }
-        task_queue.push(queued_task);
-    } else {
-        currently_working = true;
-        performTask(obj, socket, partition_ref, emitIntermediateValues);
-    }
+    /*if(Math.floor(Math.random() * 2) == 1) {
+        console.log("=========================== FABRICATED FAILURE =======================");
+        socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
+        socket.emit('REPUTATION_UPDATE', socket.id, "decrease");          
+    } else {*/
     
+        working_partition = './user_files/partitions/' + partition_ref + '.txt';
+        if(task_queue.length > 0 || currently_working) {
+            //Push new task to queue if there are existing tasks in queue or worker is doing something      
+            let queued_task = {partition_reference : partition_ref,
+                               map_obj : obj
+                              }
+            task_queue.push(queued_task);
+        } else {
+            currently_working = true;
+            performTask(obj, socket, partition_ref, emitIntermediateValues);
+        }
     
+    //}
        
     
     //socket.emit('STATUS_UPDATE', socket.id, "idle");

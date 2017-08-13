@@ -1,26 +1,20 @@
 //console.log("Executing map.txt");
 
-//MAP.JS: performs a wordcount on partitioned data
-
-//Code Requirements: temporary to allow partition.js to run isolated (?)
-//var working_partition = './user_files/partitions/1.txt';
+//MAP.JS: performs an averaging on partitioned data
 
 //Get data from partition and put into a list.
 var data_list = data.split('\r\n');
       
 //Generate the word counts for all words within data
 //Counts is an associative array: the word is the index
-var list = []; var counts = {};
-data_list.forEach(function(word){
-   counts[word] = (counts[word] || 0) + 1;
-});
+var list = []; var counts = {}; var largest = 0;
 
-//Combine the words and the counts together into a single list to return
-for(var k in counts){
-    if(k.length > 0) {
-        list.push([k, counts[k]]);      
+data_list.forEach(function(num){
+    if(parseInt(num) > largest) {
+        largest = num;
     }
-} 
-
-console.log("Returning a list");
+});
+    
+console.log("Pushed largest num " + largest + " to list");
+list.push(largest);
 return list;  
