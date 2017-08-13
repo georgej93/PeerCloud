@@ -87,9 +87,7 @@ function checkTaskQueue(socket) {
     
     if(queue_length > 0) {
         performTask(task_queue[queue_length - 1].map_obj, socket, task_queue[queue_length - 1].partition_reference, emitIntermediateValues);
-        //queue_length.pop();
         task_queue.pop();
-        //splice(queue_length - 1, 1);
     }
 }
 
@@ -109,6 +107,7 @@ socket.on('TASK', function(partition_ref, obj) {
     //Partition ref refers to an integer corresponding to a partitions filename
     console.log("Recieved task from server - partition:", partition_ref);
     
+    //Testing: falisfying worker failures
     /*if(Math.floor(Math.random() * 2) == 1) {
         console.log("=========================== FABRICATED FAILURE =======================");
         socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
