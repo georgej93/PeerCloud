@@ -2,10 +2,6 @@
 
 //MAP.JS: performs an averaging on partitioned data
 
-function findMax(data, _callback) {
-    
-}
-      
 //Get data from partition and put into a list.
 var data_list = data.split('\r\n');
       
@@ -16,7 +12,6 @@ var list = []; var counts = {}; var largest = 0;
 data_list.forEach(function(num){
     if(parseInt(num) > largest) {
         largest = num;
-        console.log("largest:",largest);
     }
 });
     

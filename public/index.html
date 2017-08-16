@@ -11,15 +11,26 @@
         </form>
         
         <form ref='uploadForm' id='uploadForm' action="/upload" method="post" encType="multipart/form-data">
+            -------------------------------------------------------------------<br>
+            Files: <br>
             Input Data :  <input type="file" name="data"   /> <br>    
             Map Code :    <input type="file" name="map"/> <br>
             Reduce Code : <input type="file" name="reduce" /> <br>
             Config File : <input type="file" name="config" /> <br>
-            <input type='submit' value='Submit Files'/>
+            Partition Factor: <input type="text" name="partition_factor"> <br>
+            Minimum Worker Reputation: <input type="text" name="min_rep"> <br>
+            <br>
+            Distribution Method:<br>
+            <input type="radio" name="dist_method" value="robin" required="required"  >Round-Robin        <br>
+            <input type="radio" name="dist_method" value="random"  >Random Assignment  <br>
+            <input type="radio" name="dist_method" value="weighted">Weighted Assignment<br>
+            <br>
+            <button type="submit">-> Submit Files / Parameters <-</button> <br>
+            -------------------------------------------------------------------
         </form>
         
         <form action="/submit" method="get">
-            <button type="submit">Submit Job</button>
+            <button type="submit">-> Submit Job <-</button>
         </form>
         
         ------------------- Testing ----------------------- <br>

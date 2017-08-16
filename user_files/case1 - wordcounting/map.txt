@@ -22,5 +22,5 @@ for(var k in counts){
     }
 } 
 
-//console.log("Returning a list");
+console.log("Returning a list");
 return list;  

@@ -1,0 +1,73 @@
+BASIC CONTENTS STRUCTURE:
+1) Introduction / Aims
+   i) Introduction
+   ii) Project Aims & Objectives
+2) Background and Context
+   i) Distributed Computing
+      1) Introduction to Distributed Computing
+      2) Applications of Distributed Computing
+      3) MapReduce Algorithm
+3) Local Framework Development
+   i) Development Choices
+      1) JavaScript
+      2) Node.js (including modules)
+      3) WebSocket
+   i) Master Design (see below for sub-topics)
+   ii) Worker Design (see below for sub-topics)
+   iii) User Front-End design
+   iv) Testing Strategy
+4) Web Framework Development
+   i) Transferring to Web
+   ... ??????????????????
+5) Evaluation
+   ... ??????????????????
+6) Future Work & Conclusions
+7) Bibliography
+8) Appendicies
+
+Things to write about:
+used:
+- javascript
+- node.js
+- mapreduce framework
+
+front-end:
+- file upload
+- parameters: partition factor / minimum reputation
+
+modules:
+- websocket
+- body-parser
+- express
+- express-file-upload
+
+master server:
+- express
+- message sending
+- handling uploaded files
+- listening for worker events
+- worker log : what it should and shouldnt include, why it is needed
+- partition log
+- distribution methods: round robin, random, weighted
+- partitioning method
+- reducing results
+
+workers:
+- executing user code
+- identification
+- statuses
+- reputations
+- partitions given
+- accepting and queuing tasks
+- communicating with master / failures
+- reading partitions / writing intermediate files
+
+data:
+- format from user
+- assumptions (one entry per line)
+- possible alternatives (bit-buckets)
+
+example tasks:
+- wordcounting: map and reduce
+- max finding: map and reduce
+- other applications 

@@ -11,10 +11,11 @@
 //File Reading Variables:
 var fs = require('fs');
 
-var user_map;
-var user_reduce;
-var partitions = 0;
-var completed = 0;
+var user_map; var user_reduce;
+var partitions = 0  ; var completed = 0;
+var partition_factor; var min_rep = 0.1;
+var dist_method;
+var last_distributed_to = 0; //Refers to index of activeWorkers that was last given a partition to handle
 
 var express = require('express');
 var path = require('path');
@@ -61,27 +62,57 @@ function findIdleWorker(callback) {
 
 var distributePartition = function (partition_ref, user_map) {
     console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
-
+    var send_to;
     var send_obj = JSON.parse(JSON.stringify(user_map));
-                        
-    findIdleWorker(function(idle_worker_id) {
-        console.log("IDLE WORKER:", idle_worker_id);
-        
-        activeWorkers.forEach(function(worker) {
-            if(worker.worker_id == idle_worker_id) {
-                updateWorkerStatus(idle_worker_id, "busy");
-            }
-        });
-    
-        io.of('/').clients((error, clients) => {
-            console.log("Sending partition " + partition_ref + " to worker: " + idle_worker_id);
-            io.sockets.connected[idle_worker_id].emit('TASK',partition_ref,send_obj);  
-            activePartitions.push(generatePartitionTracker(idle_worker_id,"handling",partition_ref));
-        });
-    
+   
+    io.of('/').clients((error, clients) => {
+        switch(dist_method) {
+            //Round-Robin Distribution Method: evenly distribute partitions across all workers
+            case 'robin' : 
+                send_to = activeWorkers[last_distributed_to].worker_id;
+                activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
+                updateWorkerStatus(send_to, "busy");
+                io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
+                if(last_distributed_to == activeWorkers.length - 1) {
+                    last_distributed_to = 0;
+                } else {
+                    last_distributed_to++;
+                }
+                break;
+            //Random Distribution Method: randomly distribute partitions across all workers
+            case 'random' : 
+                send_to = activeWorkers[Math.floor(Math.random() * activeWorkers.length)].worker_id;
+                activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
+                updateWorkerStatus(send_to, "busy");
+                io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
+                break;
+            //Weighted Distribution Method: preferential round-robin distribution based on worker reputation
+            case 'weighted' :
+                var rep_search_done = false;
+                
+                while(!rep_search_done) {
+                    if(activeWorkers[last_distributed_to].worker_rep >= min_rep) {
+                        send_to = activeWorkers[last_distributed_to].worker_id;
+                        activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
+                        updateWorkerStatus(send_to, "busy");
+                        io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj); 
+                        rep_search_done = true;                        
+                    }
+                    
+                    if(last_distributed_to == activeWorkers.length - 1) {
+                        last_distributed_to = 0;
+                        rep_search_done = true;
+                        return console.log("FAILURE: all worker reputations fall below user specified minimum");
+                    } else {
+                        last_distributed_to++;
+                    }    
+                    
+                }                                                
+                break;            
+        }
     });
-  
 }
+              
 
 function partitionData(err, data) {  
     user_map = fs.readFileSync('./user_files/map.txt','utf8');
@@ -92,7 +123,7 @@ function partitionData(err, data) {
         return console.log("Data partition failed:",err);
     }
     
-    //console.log("Partitioning data based on " + activeWorkers.length + " workers.");
+    console.log("Partitioning data based on partition_factor = ", partition_factor);
     
     var totalLineCount; var linesPerPartition;
     var lower; var upper;
@@ -106,7 +137,7 @@ function partitionData(err, data) {
     
     //Determine word allocation across the number of workers connected
     totalLineCount = split_data.length;
-    linesPerPartition = Math.ceil(totalLineCount / activeWorkers.length);
+    linesPerPartition = Math.ceil(totalLineCount / partition_factor);
 
     //Write lines to file as partitions
     lower = 0; upper = lower+linesPerPartition;
@@ -167,16 +198,21 @@ function clearData() {
 }
 
 function updateWorkerStatus(worker_id, new_status) {
-    console.log("Updating " + worker_id + " status to " + new_status + " from:");
+    //console.log("Updating " + worker_id + " status to " + new_status + " from:");
     activeWorkers.forEach(function(worker) {
         if(worker.worker_id == worker_id) {
-            console.log(activeWorkers[activeWorkers.indexOf(worker)].worker_status);
+            //console.log(activeWorkers[activeWorkers.indexOf(worker)].worker_status);
             activeWorkers[activeWorkers.indexOf(worker)].worker_status = new_status;                  
         }
     });
 }
 
 function updatePartitionTracker(sender_id, partition_reference, new_status) {
+    /*console.log("In updatePartitionTracker with ref:",partition_reference);
+    console.log("   new_status:", new_status);
+    console.log("   completed:", completed);
+    console.log(activePartitions);*/
+    
     activePartitions.forEach(function(partition) {
         if(partition.recipient_id == sender_id) {
             if(partition.partition_ref == partition_reference) {
@@ -225,7 +261,9 @@ function readIntermediateFiles(_callback) {
             return console.log(err); 
         } else {
             files.forEach(function(file) {
+                console.log("   Reading file",file);
                 fs.readFile('./intermediate/' + file, function(err, data) {
+                   if(err) { return console.log(err) }
                    var obj = JSON.parse(data);
                    collected_results = collected_results.concat(obj.values);
                    files_read++;
@@ -254,8 +292,6 @@ server.listen(8080, function() {
 });
 
 app.get('/', function(req, res) {
-    //console.log('get route', req.testing);
-    //res.end();
     res.sendFile(path.join(__dirname+'/public/index.html'));
 });
 
@@ -312,10 +348,54 @@ io.on('connect', (socket) => {
         updatePartitionTracker(worker_id, partition_ref, partition_status);
     });
     
+    //Update worker reputation if job failed
+    socket.on('REPUTATION_UPDATE', function(worker_id, reputation_change) {
+        updateWorkerReputation(worker_id, reputation_change);
+    });
+    
 });
+
+function updateWorkerReputation(worker_id, reputation_change) {
+    var current_rep; var new_rep; 
+    var rep_adjusted = false;
+    //For some reason it adjusts the reputation of all workers: why?
+    switch(reputation_change) {
+        case 'decrease' :
+            for(i=0 ; i<activeWorkers.length ; i++) {
+                if(activeWorkers[i].worker_id == worker_id) {
+                   console.log("Adjusting reputation of " + worker_id);
+                   current_rep = activeWorkers[i].worker_rep;
+                   new_rep = (current_rep - 0.1).toFixed(2);
+                   if(new_rep < 0.1) { new_rep = 0.1; }
+                   activeWorkers[i].worker_rep = new_rep;
+                   i = activeWorkers.length;
+                }
+            }
+        
+        
+            /*activeWorkers.forEach(function(worker) {
+               if(worker.worker_id = worker_id) {
+                   console.log("Adjusting reputation of " + worker_id + ", matched with " + worker.worker_id);
+                   current_rep = activeWorkers[activeWorkers.indexOf(worker)].worker_rep;
+                   new_rep = (current_rep - 0.1).toFixed(2);
+                   if(new_rep < 0.1) { new_rep = 0.1; }
+                   activeWorkers[activeWorkers.indexOf(worker)].worker_rep = new_rep;
+                   return;
+               } 
+            });*/
+            break;
+    }
+}
 
 app.post('/upload', function(req, res) {
     let config_mode = false;
+    //Possible dist_methods: robin, random, weighted.
+    dist_method = req.body.dist_method;
+    partition_factor = parseInt(req.body.partition_factor);
+    min_rep = parseFloat(req.body.min_rep);
+    console.log("dist_method set to:", dist_method);
+    console.log("partition_factor set to:", partition_factor);
+    console.log("min_rep set to:", min_rep);
     
     if(!req.files.data || !req.files.map || !req.files.reduce) {
         console.log("User input upload failed");
