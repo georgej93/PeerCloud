@@ -10,6 +10,15 @@
 
 //File Reading Variables:
 var fs = require('fs');
+var WebSocketServer = require("ws").Server;
+var wss = new WebSocketServer({ port: 8082 });
+wss.on("connection", function (ws) {
+   console.info("websocket connection open");
+});
+
+wss.onmessage = function(message) {
+    console.log(message);
+};
 
 var user_map; var user_reduce;
 var partitions = 0  ; var completed = 0;
@@ -113,7 +122,6 @@ var distributePartition = function (partition_ref, user_map) {
     });
 }
               
-
 function partitionData(err, data) {  
     user_map = fs.readFileSync('./user_files/map.txt','utf8');
     //console.log("In partition data with data:");
@@ -440,6 +448,10 @@ app.get('/submit', function(req, res) {
     var filename = './user_files/input.txt';
     partitions = 0; completed = 0;
     data = fs.readFile(filename,'utf8',partitionData);
+});
+
+app.get('/register-worker', function(req, res) {
+    res.sendFile(path.join(__dirname+'/public/register.html'));
 });
 
 app.get('/wordcount-test', function(req,res) {   
