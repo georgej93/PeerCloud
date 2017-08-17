@@ -72,54 +72,63 @@ function findIdleWorker(callback) {
 var distributePartition = function (partition_ref, user_map) {
     console.log("   DISTRIBUTE PARTITION CALLED WITH partition_ref", partition_ref);
     var send_to;
-    var send_obj = JSON.parse(JSON.stringify(user_map));
+    var map_obj = JSON.parse(JSON.stringify(user_map));
    
-    io.of('/').clients((error, clients) => {
-        switch(dist_method) {
-            //Round-Robin Distribution Method: evenly distribute partitions across all workers
-            case 'robin' : 
-                send_to = activeWorkers[last_distributed_to].worker_id;
-                activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
-                updateWorkerStatus(send_to, "busy");
-                io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
-                if(last_distributed_to == activeWorkers.length - 1) {
-                    last_distributed_to = 0;
-                } else {
-                    last_distributed_to++;
-                }
-                break;
-            //Random Distribution Method: randomly distribute partitions across all workers
-            case 'random' : 
-                send_to = activeWorkers[Math.floor(Math.random() * activeWorkers.length)].worker_id;
-                activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
-                updateWorkerStatus(send_to, "busy");
-                io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj);
-                break;
-            //Weighted Distribution Method: preferential round-robin distribution based on worker reputation
-            case 'weighted' :
-                var rep_search_done = false;
-                
-                while(!rep_search_done) {
-                    if(activeWorkers[last_distributed_to].worker_rep >= min_rep) {
+    fs.readFile('./user_files/partitions/' + partition_ref + '.txt', 'utf8', function(err,partition_data) {
+        //Emit failure if no data read in
+        if(!partition_data) {
+            console.log(" ! ! ! ! - FAILURE : no data read in for partition:", partition_ref);
+        } else {
+            io.of('/').clients((error, clients) => {
+                switch(dist_method) {
+                    //Round-Robin Distribution Method: evenly distribute partitions across all workers
+                    case 'robin' : 
                         send_to = activeWorkers[last_distributed_to].worker_id;
                         activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
                         updateWorkerStatus(send_to, "busy");
-                        io.sockets.connected[send_to].emit('TASK',partition_ref,send_obj); 
-                        rep_search_done = true;                        
-                    }
-                    
-                    if(last_distributed_to == activeWorkers.length - 1) {
-                        last_distributed_to = 0;
-                        rep_search_done = true;
-                        return console.log("FAILURE: all worker reputations fall below user specified minimum");
-                    } else {
-                        last_distributed_to++;
-                    }    
-                    
-                }                                                
-                break;            
-        }
+                        io.sockets.connected[send_to].emit('TASK',partition_ref,map_obj, partition_data);
+                        if(last_distributed_to == activeWorkers.length - 1) {
+                            last_distributed_to = 0;
+                        } else {
+                            last_distributed_to++;
+                        }
+                    break;
+                    //Random Distribution Method: randomly distribute partitions across all workers
+                    case 'random' : 
+                        send_to = activeWorkers[Math.floor(Math.random() * activeWorkers.length)].worker_id;
+                        activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
+                        updateWorkerStatus(send_to, "busy");
+                        io.sockets.connected[send_to].emit('TASK',partition_ref,map_obj, partition_data);
+                    break;
+                    //Weighted Distribution Method: preferential round-robin distribution based on worker reputation
+                    case 'weighted' :
+                        var rep_search_done = false;
+                        
+                        while(!rep_search_done) {
+                            if(activeWorkers[last_distributed_to].worker_rep >= min_rep) {
+                                send_to = activeWorkers[last_distributed_to].worker_id;
+                                activePartitions.push(generatePartitionTracker(send_to,"handling",partition_ref));
+                                updateWorkerStatus(send_to, "busy");
+                                io.sockets.connected[send_to].emit('TASK',partition_ref,map_obj, partition_data); 
+                                rep_search_done = true;                        
+                            }
+                            
+                            if(last_distributed_to == activeWorkers.length - 1) {
+                                last_distributed_to = 0;
+                                rep_search_done = true;
+                                return console.log("FAILURE: all worker reputations fall below user specified minimum");
+                            } else {
+                                last_distributed_to++;
+                            }    
+                            
+                        }                                                
+                    break;            
+                }
+            });
+        }        
     });
+    
+    
 }
               
 function partitionData(err, data) {  
@@ -342,7 +351,6 @@ io.on('connect', (socket) => {
     });
     
     socket.on('INTERMEDIATE_VALUE', function(val) {
-        //DO A REDUCE!
         console.log("Recieved an intermediate value", val);
     });
     
@@ -452,6 +460,10 @@ app.get('/submit', function(req, res) {
 
 app.get('/register-worker', function(req, res) {
     res.sendFile(path.join(__dirname+'/public/register.html'));
+});
+
+app.get('/fs.js', function(req, res) {
+    res.sendFile(path.join(__dirname+'/public/fs.js'));
 });
 
 app.get('/wordcount-test', function(req,res) {   
