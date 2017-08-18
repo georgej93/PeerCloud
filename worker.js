@@ -1,5 +1,5 @@
 //socket.io connection for new worker:
-const io = require('socket.io-client');
+//const io = require('socket.io-client');
 var socket;
 
 //Testing Variables
@@ -102,7 +102,7 @@ socket.on('REQ_INFO', function(msg) {
 });  
 
 //Perform test task
-socket.on('TASK', function(partition_ref, obj) {
+socket.on('TASK', function(partition_ref, obj, partition_data) {
     //socket.emit('STATUS_UPDATE', socket.id, "busy");
     //Partition ref refers to an integer corresponding to a partitions filename
     console.log("Recieved task from server - partition:", partition_ref);

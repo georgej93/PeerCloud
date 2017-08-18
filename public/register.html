@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="styles" />    
+        <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>         
+    <script>
+        //Testing Variables
+        var tests = 0;
+        var failures = 0;
+        
+        //Worker Info Variables:
+        var worker_info, id, port, host;
+        var working_partition;
+        var currently_working = false;
+        var intermediates_written = 0;
+        var task_queue = [];
+
+        function generateInfo(id, stat) {
+            var newWorker = {
+                worker_id: id, 
+                worker_status: stat,
+                worker_rep: 1.0,
+                worker_partition: 0
+            };
+            
+            return newWorker;
+        }
+
+        function performTask(jsonObj, socket, partition_ref, partition_data, _callback) { 
+            var map = new Function('data', jsonObj);
+            var intermediate_values = map(partition_data);
+            _callback(intermediate_values, socket, partition_ref);          
+        };
+
+        function emitIntermediateValues(intermediate_values, socket, partition_ref) {   
+            //In the case of a worker producing no results, consider this as a failed job
+            if(intermediate_values.length == 0) {
+                console.log(" ! ! ! ! - FAILURE 2 - ! ! ! !");
+                socket.emit('STATUS_UPDATE', socket.id, "idle");
+                currently_working = false;   
+                socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");
+                socket.emit('REPUTATION_UPDATE', socket.id, "decrease"); 
+                checkTaskQueue();
+            } else {        
+                //Create an intermediate file: named with worker_id. Worker should append if file already exists
+                var intermediate_obj = { 'values' : intermediate_values};
+                var writeable = JSON.stringify(intermediate_obj); 
+                
+                var intermediate_filename = './intermediate/' + socket.id + '-' + intermediates_written + '.txt';
+                intermediates_written++;     
+                socket.emit('INTERMEDIATE_VALUE', writeable);
+                socket.emit('STATUS_UPDATE', socket.id, "idle");
+                socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
+                currently_working = false;   
+                checkTaskQueue(socket);
+                /*fs.writeFile(intermediate_filename, writeable, function(err) {
+                    socket.emit('STATUS_UPDATE', socket.id, "idle");
+                    currently_working = false;   
+                    if(err) {                         
+                        console.log(" ! ! ! ! - FAILURE 3 - ! ! ! !");               
+                        socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "failure");        
+                        socket.emit('REPUTATION_UPDATE', socket.id, "decrease");               
+                    } else {               
+                        console.log("Intermediate file written:",intermediate_filename);
+                        socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
+                    }
+                    checkTaskQueue(socket);
+                });*/
+            }
+            
+        }
+
+        function checkTaskQueue(socket) {
+            let queue_length = task_queue.length;
+            
+            if(queue_length > 0) {
+                performTask(task_queue[queue_length - 1].map_obj, socket, task_queue[queue_length - 1].partition_reference, emitIntermediateValues);
+                task_queue.pop();
+            }
+        }
+
+        //Create websocket connection
+        var socket = io.connect('http://localhost:8080/');
+        
+        
+        //Send worker info to server on request
+        socket.on('REQ_INFO', function(msg) {
+            console.log(socket.id + " : Got a 'REQ_INFO' message from server");
+            socket.emit('WORKER_INFO', generateInfo(socket.id, "idle"));
+            currently_working = false;   
+            document.getElementById('consoleLog').innerHTML += 'Connected to Server: waiting for task...';
+        });  
+
+        //Perform test task
+        socket.on('TASK', function(partition_ref, obj, partition_data) {
+            //console.log("Recieved task from server - partition:", partition_ref);
+            document.getElementById('consoleLog').innerHTML += '<br>Recieved task from Server! Handling data:<br>' + partition_data;          
+            //Testing: falisfying worker failures
+            /*if(Math.floor(Math.random() * 2) == 1) {
+                console.log("=========================== FABRICATED FAILURE =======================");
+                socket.emit('PARTITION_UPDATE', socket.id, partition_ref, "done");
+                socket.emit('REPUTATION_UPDATE', socket.id, "decrease");          
+            } else {*/
+            
+                working_partition = './user_files/partitions/' + partition_ref + '.txt';
+                if(task_queue.length > 0 || currently_working) {
+                    //Push new task to queue if there are existing tasks in queue or worker is doing something      
+                    let queued_task = {partition_reference : partition_ref,
+                                       map_obj : obj
+                                      }
+                    task_queue.push(queued_task);
+                } else {
+                    currently_working = true;
+                    performTask(obj, socket, partition_ref, partition_data, emitIntermediateValues);
+                }            
+            //}            
+        });
+    </script>  
+      
+    </head>
+
+    <body>
+        You are now an active worker.        
+        <br>        
+        <div id="echo-log" style="float: left; margin-left: 20px; padding-left: 20px; width: 350px; border-left: solid 1px #cccccc;"> <strong>Log:</strong>
+            <div id="consoleLog"></div>
+            <button class="echo-button" id="clearLogBut" style="position: relative; top: 3px;">Clear log</button>
+            <form action="/" method="get">
+                <button type="submit">Close Connection</button>
+            </form>     
+        </div> 
+    </body>   
+</html>

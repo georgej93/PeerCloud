@@ -1,5 +1,15 @@
+<!DOCTYPE html>
 <html>
+    <head>        
+        <link rel="stylesheet" type="text/css" href="styles" />    
+    </head>
+
     <body>
+        <button onclick="checkWebSocket()">Check WebSocket Compatibility</button>
+        <form action="/register-worker" method="get">
+            <button type="submit">Register As Worker</button>
+        </form>
+        
         <h1>Master Homepage</h1>
                
         <form action="/worker-tracker" method="get">
@@ -42,7 +52,5 @@
         <form action="/averaging-test" method="get">
             <button type="submit">Testing Averaging</button>
         </form>
-        
     </body>
-    
 </html>
