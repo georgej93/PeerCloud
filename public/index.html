@@ -1,64 +1,56 @@
 <!DOCTYPE html>
 <html>
     <head>        
-        <script language="javascript" type="text/javascript">          
-            function checkWebSocket() {
-                if('WebSocket' in window) {
-                    alert("WebSocket supported");
-                } else {
-                    alert("WebSocket not supported");
-                }
-            }
-        </script>       
+        <link rel="stylesheet" type="text/css" href="styles" />    
     </head>
 
     <body>
-    <button onclick="checkWebSocket()">Check WebSocket Compatibility</button>
-    <form action="/register-worker" method="get">
-        <button type="submit">Register As Worker</button>
-    </form>
-    
-    <h1>Master Homepage</h1>
-           
-    <form action="/worker-tracker" method="get">
-        <button type="submit">Worker Tracker</button>
-    </form>
-    
-    <form action="/partition-tracker" method="get">
-        <button type="submit">Partition Tracker</button>
-    </form>
-    
-    <form ref='uploadForm' id='uploadForm' action="/upload" method="post" encType="multipart/form-data">
-        -------------------------------------------------------------------<br>
-        Files: <br>
-        Input Data :  <input type="file" name="data"   /> <br>    
-        Map Code :    <input type="file" name="map"/> <br>
-        Reduce Code : <input type="file" name="reduce" /> <br>
-        Config File : <input type="file" name="config" /> <br>
-        Partition Factor: <input type="text" name="partition_factor"> <br>
-        Minimum Worker Reputation: <input type="text" name="min_rep"> <br>
-        <br>
-        Distribution Method:<br>
-        <input type="radio" name="dist_method" value="robin" required="required"  >Round-Robin        <br>
-        <input type="radio" name="dist_method" value="random"  >Random Assignment  <br>
-        <input type="radio" name="dist_method" value="weighted">Weighted Assignment<br>
-        <br>
-        <button type="submit">-> Submit Files / Parameters <-</button> <br>
-        -------------------------------------------------------------------
-    </form>
-    
-    <form action="/submit" method="get">
-        <button type="submit">-> Submit Job <-</button>
-    </form>
-    
-    ------------------- Testing ----------------------- <br>
-    For testing purposes only: will not feature in final version <br>
-    <form action="/wordcount-test" method="get">
-        <button type="submit">Testing Wordcount</button>
-    </form>
-    
-    <form action="/averaging-test" method="get">
-        <button type="submit">Testing Averaging</button>
-    </form>
+        <button onclick="checkWebSocket()">Check WebSocket Compatibility</button>
+        <form action="/register-worker" method="get">
+            <button type="submit">Register As Worker</button>
+        </form>
+        
+        <h1>Master Homepage</h1>
+               
+        <form action="/worker-tracker" method="get">
+            <button type="submit">Worker Tracker</button>
+        </form>
+        
+        <form action="/partition-tracker" method="get">
+            <button type="submit">Partition Tracker</button>
+        </form>
+        
+        <form ref='uploadForm' id='uploadForm' action="/upload" method="post" encType="multipart/form-data">
+            -------------------------------------------------------------------<br>
+            Files: <br>
+            Input Data :  <input type="file" name="data"   /> <br>    
+            Map Code :    <input type="file" name="map"/> <br>
+            Reduce Code : <input type="file" name="reduce" /> <br>
+            Config File : <input type="file" name="config" /> <br>
+            Partition Factor: <input type="text" name="partition_factor"> <br>
+            Minimum Worker Reputation: <input type="text" name="min_rep"> <br>
+            <br>
+            Distribution Method:<br>
+            <input type="radio" name="dist_method" value="robin" required="required"  >Round-Robin        <br>
+            <input type="radio" name="dist_method" value="random"  >Random Assignment  <br>
+            <input type="radio" name="dist_method" value="weighted">Weighted Assignment<br>
+            <br>
+            <button type="submit">-> Submit Files / Parameters <-</button> <br>
+            -------------------------------------------------------------------
+        </form>
+        
+        <form action="/submit" method="get">
+            <button type="submit">-> Submit Job <-</button>
+        </form>
+        
+        ------------------- Testing ----------------------- <br>
+        For testing purposes only: will not feature in final version <br>
+        <form action="/wordcount-test" method="get">
+            <button type="submit">Testing Wordcount</button>
+        </form>
+        
+        <form action="/averaging-test" method="get">
+            <button type="submit">Testing Averaging</button>
+        </form>
     </body>
 </html>

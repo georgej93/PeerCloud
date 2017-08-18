@@ -48,6 +48,7 @@ var activeWorkers    = [];
 var activePartitions = [];
 var id_tracker = 0;
 var data;
+var intermediate_data = [];
 
 //Find idle worker and send partition
 function findIdleWorker(callback) {
@@ -240,7 +241,8 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
                                      activePartitions.splice(activePartitions.indexOf(partition), 1);
                                      if(completed == partitions) {
                                         console.log(completed + "/" + partitions + " partitions returned, starting reduce ====================================");
-                                        readIntermediateFiles(reduceResults);
+                                        reduceResults();
+                                        //readIntermediateFiles(reduceResults);
                                      }
                                      break;
                     //Attempt to redistribute any failed partitions
@@ -254,7 +256,7 @@ function updatePartitionTracker(sender_id, partition_reference, new_status) {
 
 }
 
-function reduceResults(results) {
+function reduceResults() {
     console.log("In reduce results with collected results:");
     //console.log(results);
     fs.readFile('./user_files/reduce.txt', 'utf8', function(err, data) {
@@ -262,36 +264,11 @@ function reduceResults(results) {
             return console.log(err); 
         } else {
             var reduce = new Function('results', JSON.parse(JSON.stringify(data)));
-            var reduced_results = reduce(results);            
+            var reduced_results = reduce(intermediate_data);            
         }
      
     });
     
-}
-
-function readIntermediateFiles(_callback) {
-    var collected_results = [];
-    var files_read = 0;
-    
-    fs.readdir('./intermediate',function(err, files) {
-        if(err) { 
-            return console.log(err); 
-        } else {
-            files.forEach(function(file) {
-                console.log("   Reading file",file);
-                fs.readFile('./intermediate/' + file, function(err, data) {
-                   if(err) { return console.log(err) }
-                   var obj = JSON.parse(data);
-                   collected_results = collected_results.concat(obj.values);
-                   files_read++;
-                   if(files_read == completed) {
-                       _callback(collected_results);
-                   }
-               });
-            });           
-        }       
-    });
-
 }
 
 function generatePartitionTracker(id, stat, part_ref) {
@@ -352,6 +329,10 @@ io.on('connect', (socket) => {
     
     socket.on('INTERMEDIATE_VALUE', function(val) {
         console.log("Recieved an intermediate value", val);
+        let intermediate_value = JSON.parse(val);
+        intermediate_data = intermediate_data.concat(intermediate_value.values);
+        //intermediate_data.push(intermediate_value.values);
+        console.log(intermediate_data);
     });
     
     //Update Worker Status
@@ -449,6 +430,7 @@ function moveFile(file, path) {
 
 app.get('/submit', function(req, res) {
     clearData();
+    intermediate_data = [];
     
     //User uploaded file: input.txt
     //Distribution is performed in function called in partitionData
@@ -456,14 +438,15 @@ app.get('/submit', function(req, res) {
     var filename = './user_files/input.txt';
     partitions = 0; completed = 0;
     data = fs.readFile(filename,'utf8',partitionData);
+    res.sendFile(path.join(__dirname+'/public/index.html'));
 });
 
 app.get('/register-worker', function(req, res) {
     res.sendFile(path.join(__dirname+'/public/register.html'));
 });
 
-app.get('/fs.js', function(req, res) {
-    res.sendFile(path.join(__dirname+'/public/fs.js'));
+app.get('/styles', function(req, res) {
+    res.sendFile(path.join(__dirname+'/public/style.css'));
 });
 
 app.get('/wordcount-test', function(req,res) {   
