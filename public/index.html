@@ -1,56 +1,280 @@
 <!DOCTYPE html>
 <html>
-    <head>        
+    <head>   
         <link rel="stylesheet" type="text/css" href="styles" />    
+
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+        <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+        <script>
+        function checkWebSocket() {
+            if (window.WebSocket)
+            {
+              alert("Your browser supports WebSocket!");
+            }
+            else
+            {
+              alert("Your browser does not support WebSocket! Please switch to a compatible browser");
+            }
+        }
+        </script>
     </head>
 
+    <nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Peer Cloud</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="active"><a href="/">Submit Task <span class="sr-only">(current)</span></a></li>
+        <li><a href="register-worker">Register As Worker</a></li>       
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Trackers<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="worker-tracker">View Active Workers</a></li>
+            <li><a href="partition-tracker">View Active Partitions</a></li>         
+          </ul>
+        </li>
+      </ul>  
+      
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+        
     <body>
-        <button onclick="checkWebSocket()">Check WebSocket Compatibility</button>
-        <form action="/register-worker" method="get">
-            <button type="submit">Register As Worker</button>
-        </form>
+        <!-- particles.js container -->
+        <div id="particles-js"></div>
+   
+        <br>
+        <br>
+        <div class="col-xs-12 col-sm-8 col-md-8 col-sm-offset-4 col-md-offset-4">
+            <h1 style="color:white;">Peer Cloud: Task Submission</h1>
+        </div>
+ 
+        <div class="col-xs-12 col-sm-8 col-md-8 col-sm-offset-4 col-md-offset-4">
+             <p style="top: 50px;">Specify user files to be used in the processing of a task, to be handled by active workers</p>
+        </div>
         
-        <h1>Master Homepage</h1>
-               
-        <form action="/worker-tracker" method="get">
-            <button type="submit">Worker Tracker</button>
-        </form>
+        <div class="col-xs-12 col-sm-8 col-md-8 col-sm-offset-4 col-md-offset-4">
+           <p style="top: 75px; color: black;" ><button onclick="checkWebSocket()">Check WebSocket Compatibility</button></p>
+        </div>
         
-        <form action="/partition-tracker" method="get">
-            <button type="submit">Partition Tracker</button>
-        </form>
+        <br><br><br><br><br><br>
         
-        <form ref='uploadForm' id='uploadForm' action="/upload" method="post" encType="multipart/form-data">
-            -------------------------------------------------------------------<br>
-            Files: <br>
-            Input Data :  <input type="file" name="data"   /> <br>    
-            Map Code :    <input type="file" name="map"/> <br>
-            Reduce Code : <input type="file" name="reduce" /> <br>
-            Config File : <input type="file" name="config" /> <br>
-            Partition Factor: <input type="text" name="partition_factor"> <br>
-            Minimum Worker Reputation: <input type="text" name="min_rep"> <br>
-            <br>
-            Distribution Method:<br>
-            <input type="radio" name="dist_method" value="robin" required="required"  >Round-Robin        <br>
-            <input type="radio" name="dist_method" value="random"  >Random Assignment  <br>
-            <input type="radio" name="dist_method" value="weighted">Weighted Assignment<br>
-            <br>
-            <button type="submit">-> Submit Files / Parameters <-</button> <br>
-            -------------------------------------------------------------------
-        </form>
+        <form ref='uploadForm' id='uploadForm' action="/upload" method="post" encType="multipart/form-data">      
+            <div class="container">
+            <div class="row centered-form">
+            <div class="col-xs-12 col-sm-8 col-md-8 col-sm-offset-2 col-md-offset-2">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Submit User Files: <small>please provide a Data, Map and Reduce file (txt format)</small></h3>
+                    </div>                    
+                        <div class="panel-body">
+                            <form role="form">
+                                <div class="row">
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                        Data File:
+                                    </div>
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                        Map File:
+                                    </div>
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                        Reduce File:
+                                    </div>                               
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                        <div class="form-group">
+                                            <input type="file" name="data" placeholder="Data File"/> 
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                        <div class="form-group">
+                                            <input type="file" name="map" placeholder="Map File"/> 
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                        <div class="form-group">
+                                            <input type="file" name="reduce" placeholder="Reduce File"/> 
+                                        </div>
+                                    </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-6 col-md-6">
+                                        Partition Factor:
+                                    </div>
+                                    <div class="col-xs-6 col-sm-6 col-md-6">
+                                        Minimum Worker Reputation:
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-6 col-sm-6 col-md-6">
+                                        <div class="form-group">
+                                            <input type="text" name="partition_factor" class="form-control input-sm" placeholder="number of data partitions to create">
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-6 col-sm-6 col-md-6">
+                                        <div class="form-group">
+                                            <input type="text" name="min_rep" class="form-control input-sm" placeholder="decimal value between 0-1">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                Distribution Method:
+                                <div class="row">
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                                    <input type="radio" name="dist_method" value="robin" required="required">Round-Robin
+                                    </div>
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                          <input type="radio" name="dist_method" value="random">Random Assignment 
+                                    </div>
+                                    <div class="col-xs-4 col-sm-4 col-md-4">
+                                          <input type="radio" name="dist_method" value="weighted">Weighted Assignment
+                                    </div>                               
+                                </div>
+                                
+                                <input type="submit" value="Submit User Files" class="btn btn-info btn-block">
+                            
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+    </form>
         
+    <div class="col-xs-12 col-sm-8 col-md-8 col-sm-offset-2 col-md-offset-2">
         <form action="/submit" method="get">
-            <button type="submit">-> Submit Job <-</button>
+            <input type="submit" value="Submit Task" class="btn btn-info btn-block">
         </form>
-        
-        ------------------- Testing ----------------------- <br>
-        For testing purposes only: will not feature in final version <br>
-        <form action="/wordcount-test" method="get">
-            <button type="submit">Testing Wordcount</button>
-        </form>
-        
-        <form action="/averaging-test" method="get">
-            <button type="submit">Testing Averaging</button>
-        </form>
+    </div>
+
+            <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+        <script>/* ---- particles.js config ---- */
+            "use strict";
+
+        particlesJS("particles-js", {
+  "particles": {
+    "number": {
+      "value": 380,
+      "density": {
+        "enable": true,
+        "value_area": 800
+      }
+    },
+    "color": {
+      "value": "#007acc"
+    },
+    "shape": {
+      "type": "circle",
+      "stroke": {
+        "width": 0,
+        "color": "#000000"
+      },
+      "polygon": {
+        "nb_sides": 5
+      },
+      "image": {
+        "src": "img/github.svg",
+        "width": 100,
+        "height": 100
+      }
+    },
+    "opacity": {
+      "value": 0.5,
+      "random": false,
+      "anim": {
+        "enable": false,
+        "speed": 1,
+        "opacity_min": 0.1,
+        "sync": false
+      }
+    },
+    "size": {
+      "value": 3,
+      "random": true,
+      "anim": {
+        "enable": false,
+        "speed": 40,
+        "size_min": 0.1,
+        "sync": false
+      }
+    },
+    "line_linked": {
+      "enable": true,
+      "distance": 150,
+      "color": "#007acc",
+      "opacity": 0.4,
+      "width": 1
+    },
+    "move": {
+      "enable": true,
+      "speed": 6,
+      "direction": "none",
+      "random": false,
+      "straight": false,
+      "out_mode": "out",
+      "bounce": false,
+      "attract": {
+        "enable": false,
+        "rotateX": 600,
+        "rotateY": 1200
+      }
+    }
+  },
+  "interactivity": {
+    "detect_on": "canvas",
+    "events": {
+      "onhover": {
+        "enable": true,
+        "mode": "grab"
+      },
+      "onclick": {
+        "enable": true,
+        "mode": "push"
+      },
+      "resize": true
+    },
+    "modes": {
+      "grab": {
+        "distance": 140,
+        "line_linked": {
+          "opacity": 1
+        }
+      },
+      "bubble": {
+        "distance": 400,
+        "size": 40,
+        "duration": 2,
+        "opacity": 8,
+        "speed": 3
+      },
+      "repulse": {
+        "distance": 200,
+        "duration": 0.4
+      },
+      "push": {
+        "particles_nb": 4
+      },
+      "remove": {
+        "particles_nb": 2
+      }
+    }
+  },
+  "retina_detect": true
+});
+</script>
+    
     </body>
 </html>
