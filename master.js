@@ -385,7 +385,6 @@ function updateWorkerReputation(worker_id, reputation_change) {
 }
 
 app.post('/upload', function(req, res) {
-    let config_mode = false;
     //Possible dist_methods: robin, random, weighted.
     dist_method = req.body.dist_method;
     partition_factor = parseInt(req.body.partition_factor);
@@ -402,20 +401,12 @@ app.post('/upload', function(req, res) {
         let mapFile    = req.files.map;
         let reduceFile = req.files.reduce;
         
-        if(req.files.config) {
-            config_mode = true;
-            let configFile = req.files.config;
-        }
-        
         //Move files to user_files directory
         var path = './user_files/';    
         moveFile(dataFile, path + 'input.txt');
         moveFile(mapFile, path + 'map.txt');
         moveFile(reduceFile, path + 'reduce.txt');
         
-        if(config_mode) {
-            moveFile(configFile, path + 'config.txt');
-        }
         console.log("User input was uploaded");
         res.redirect('/');
     }
