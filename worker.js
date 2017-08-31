@@ -92,7 +92,7 @@ function checkTaskQueue(socket) {
 }
 
 //Create websocket connection
-var socket = io.connect('http://localhost:8080/');
+var socket = io.connect('http://localhost:8088/');
 
 //Send worker info to server on request
 socket.on('REQ_INFO', function(msg) {

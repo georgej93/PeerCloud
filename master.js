@@ -10,15 +10,6 @@
 
 //File Reading Variables:
 var fs = require('fs');
-var WebSocketServer = require("ws").Server;
-var wss = new WebSocketServer({ port: 8082 });
-wss.on("connection", function (ws) {
-   console.info("websocket connection open");
-});
-
-wss.onmessage = function(message) {
-    console.log(message);
-};
 
 var user_map; var user_reduce;
 var partitions = 0  ; var completed = 0;
@@ -39,7 +30,7 @@ app.use(fileUpload());
 
 //socket.io module requirements: https://www.npmjs.com/package/socket.io
 var server = require('http').createServer(app);
-var io = require('socket.io')(server);
+var io = require('socket.io').listen(8088);
 const adminNamespace = io.of('/');
 
 //book-keeping variables: redundant now? (websockets working?)

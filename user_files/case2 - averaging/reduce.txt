@@ -7,4 +7,6 @@ while(i<results.length) {
 }
 
 console.log("Final Result: maxNum is", maxNum);
-return maxNum;
+var reduced_result = [];
+reduced_result.push(maxNum);
+return reduced_result;
